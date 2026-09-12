@@ -1,0 +1,32 @@
+# STM32CubeIDE build output
+**/Debug/
+**/Release/
+**/build/
+*.elf
+*.map
+*.list
+*.o
+*.d
+*.su
+*.cyclo
+*.lst
+
+# Generated programming and diagnostic artifacts
+*.bin
+*.srec
+*.log
+*.launch
+
+# Workspace and editor state
+.metadata/
+.settings/.cache/
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Operating system files
+Thumbs.db
+Desktop.ini
+.DS_Store
