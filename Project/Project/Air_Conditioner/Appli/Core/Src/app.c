@@ -26,6 +26,9 @@
 #include "app_bqueue.h"
 #include "app_cpuload.h"
 #include "app_postprocess.h"
+#include "app_input_logic.h"
+#include "dht11.h"
+#include "key.h"
 #include "tx_api.h"
 #include "cmw_camera.h"
 #include "ll_aton_runtime.h"
@@ -37,6 +40,13 @@ typedef struct {
     uint32_t inf_ms;
     uint32_t pp_ms;
     uint32_t disp_ms;
+    float temperature;
+    float humidity;
+    uint8_t sensor_valid;
+    uint8_t last_key;
+    uint8_t power_on;
+    uint8_t mode;
+    uint8_t target_temperature;
 } app_display_info_t;
 
 typedef struct {
@@ -59,11 +69,14 @@ static TX_THREAD dp_thread;
 static UCHAR dp_thread_stack[4096];
 static TX_THREAD isp_thread;
 static UCHAR isp_thread_stack[4096];
+static TX_THREAD input_thread;
+static UCHAR input_thread_stack[2048];
 
 static VOID nn_thread_entry(ULONG id);
 static VOID pp_thread_entry(ULONG id);
 static VOID dp_thread_entry(ULONG id);
 static VOID isp_thread_entry(ULONG id);
+static VOID input_thread_entry(ULONG id);
 
 static app_display_t display;
 
@@ -77,25 +90,171 @@ static const char *nn_classes_table[NN_CLASSES] = NN_CLASSES_TABLE;
 static app_cpuload_t cpuload;
 
 static void app_display_network_output(app_display_info_t *display_info);
+static void app_input_update_sensor(float temperature,
+                                    float humidity,
+                                    uint8_t valid);
+static void app_input_apply_key(uint8_t key_code);
+static const char *app_mode_name(uint8_t mode);
 
 void app_run(void)
 {
+    display.info.target_temperature = APP_DEFAULT_TARGET_TEMP_C;
+    display.info.mode = APP_MODE_AUTO;
+    display.info.power_on = 0U;
+    display.info.sensor_valid = 0U;
+    display.info.last_key = APP_INPUT_KEY_NONE;
     app_lcd_init();
     app_bqueue_init(&nn_input_queue, 2, (uint8_t *[2]){nn_input_buffers[0], nn_input_buffers[1]});
     app_bqueue_init(&nn_output_queue, 2, (uint8_t *[2]){nn_output_buffers[0], nn_output_buffers[1]});
     app_cpuload_init(&cpuload);
     app_camera_init(app_camera_display_pipe_vsync_cb, app_camera_display_pipe_frame_cb, NULL, app_camera_nn_pipe_frame_cb);
 
-    tx_semaphore_create(&isp_semaphore, NULL, 0);
-    tx_semaphore_create(&display.update, NULL, 0);
-    tx_mutex_create(&display.lock, NULL, TX_INHERIT);
+    if (tx_semaphore_create(&isp_semaphore, NULL, 0) != TX_SUCCESS)
+    {
+        Error_Handler();
+    }
+
+    if (tx_semaphore_create(&display.update, NULL, 0) != TX_SUCCESS)
+    {
+        Error_Handler();
+    }
+
+    if (tx_mutex_create(&display.lock, NULL, TX_INHERIT) != TX_SUCCESS)
+    {
+        Error_Handler();
+    }
+
+    key_init();
 
     app_camera_display_pipe_start(app_lcd_get_bg_buffer(), CMW_MODE_CONTINUOUS);
 
-    tx_thread_create(&nn_thread, "NN Thread", nn_thread_entry, 0, nn_thread_stack, sizeof(nn_thread_stack), TX_MAX_PRIORITIES - 3, TX_MAX_PRIORITIES - 3, 10, TX_AUTO_START);
-    tx_thread_create(&pp_thread, "PP Thread", pp_thread_entry, 0, pp_thread_stack, sizeof(pp_thread_stack), TX_MAX_PRIORITIES - 2, TX_MAX_PRIORITIES - 2, 10, TX_AUTO_START);
-    tx_thread_create(&dp_thread, "DP Thread", dp_thread_entry, 0, dp_thread_stack, sizeof(dp_thread_stack), TX_MAX_PRIORITIES - 2, TX_MAX_PRIORITIES - 2, 10, TX_AUTO_START);
-    tx_thread_create(&isp_thread, "ISP Thread", isp_thread_entry, 0, isp_thread_stack, sizeof(isp_thread_stack), TX_MAX_PRIORITIES - 4, TX_MAX_PRIORITIES - 4, 10, TX_AUTO_START);
+    if (tx_thread_create(&nn_thread, "NN Thread", nn_thread_entry, 0, nn_thread_stack, sizeof(nn_thread_stack), TX_MAX_PRIORITIES - 3, TX_MAX_PRIORITIES - 3, 10, TX_AUTO_START) != TX_SUCCESS)
+    {
+        Error_Handler();
+    }
+
+    if (tx_thread_create(&pp_thread, "PP Thread", pp_thread_entry, 0, pp_thread_stack, sizeof(pp_thread_stack), TX_MAX_PRIORITIES - 2, TX_MAX_PRIORITIES - 2, 10, TX_AUTO_START) != TX_SUCCESS)
+    {
+        Error_Handler();
+    }
+
+    if (tx_thread_create(&dp_thread, "DP Thread", dp_thread_entry, 0, dp_thread_stack, sizeof(dp_thread_stack), TX_MAX_PRIORITIES - 2, TX_MAX_PRIORITIES - 2, 10, TX_AUTO_START) != TX_SUCCESS)
+    {
+        Error_Handler();
+    }
+
+    if (tx_thread_create(&isp_thread, "ISP Thread", isp_thread_entry, 0, isp_thread_stack, sizeof(isp_thread_stack), TX_MAX_PRIORITIES - 4, TX_MAX_PRIORITIES - 4, 10, TX_AUTO_START) != TX_SUCCESS)
+    {
+        Error_Handler();
+    }
+    if (tx_thread_create(&input_thread, "Input Thread", input_thread_entry, 0, input_thread_stack, sizeof(input_thread_stack), TX_MAX_PRIORITIES - 3, TX_MAX_PRIORITIES - 3, 10, TX_AUTO_START) != TX_SUCCESS)
+    {
+        Error_Handler();
+    }
+}
+
+static void app_input_update_sensor(float temperature,
+                                    float humidity,
+                                    uint8_t valid)
+{
+    tx_mutex_get(&display.lock, TX_WAIT_FOREVER);
+    display.info.temperature = temperature;
+    display.info.humidity = humidity;
+    display.info.sensor_valid = valid;
+    tx_mutex_put(&display.lock);
+    tx_semaphore_ceiling_put(&display.update, 1);
+}
+
+static void app_input_apply_key(uint8_t key_code)
+{
+    app_input_action_t action;
+
+    action = app_input_key_to_action(key_code);
+    tx_mutex_get(&display.lock, TX_WAIT_FOREVER);
+    display.info.last_key = key_code;
+
+    switch (action)
+    {
+        case APP_INPUT_ACTION_TOGGLE_POWER:
+            display.info.power_on = (uint8_t)!display.info.power_on;
+            break;
+        case APP_INPUT_ACTION_MODE_NEXT:
+            display.info.mode++;
+            if (display.info.mode > APP_MODE_SLEEP)
+            {
+                display.info.mode = APP_MODE_AUTO;
+            }
+            break;
+        case APP_INPUT_ACTION_TEMP_DOWN:
+            if (display.info.target_temperature > 16U)
+            {
+                display.info.target_temperature--;
+            }
+            break;
+        case APP_INPUT_ACTION_TEMP_UP:
+            if (display.info.target_temperature < 30U)
+            {
+                display.info.target_temperature++;
+            }
+            break;
+        case APP_INPUT_ACTION_NONE:
+        default:
+            break;
+    }
+
+    tx_mutex_put(&display.lock);
+    tx_semaphore_ceiling_put(&display.update, 1);
+}
+
+static VOID input_thread_entry(ULONG id)
+{
+    float temperature = 0.0f;
+    float humidity = 0.0f;
+    uint32_t last_sensor_tick = 0U;
+    uint8_t key_code;
+    uint8_t sensor_valid;
+
+    UNUSED(id);
+    sensor_valid = (dht11_init() == 0U) ? 1U : 0U;
+    if (sensor_valid != 0U)
+    {
+        sensor_valid = (dht11_get_data(&temperature, &humidity) == 0U) ? 1U : 0U;
+    }
+    app_input_update_sensor(temperature, humidity, sensor_valid);
+    last_sensor_tick = HAL_GetTick();
+
+    while (1)
+    {
+        key_code = key_scan(0U);
+        if (key_code != NONE_PRES)
+        {
+            app_input_apply_key(key_code);
+        }
+
+        if ((HAL_GetTick() - last_sensor_tick) >= APP_DHT11_PERIOD_MS)
+        {
+            last_sensor_tick = HAL_GetTick();
+            sensor_valid = (dht11_get_data(&temperature, &humidity) == 0U) ? 1U : 0U;
+            app_input_update_sensor(temperature, humidity, sensor_valid);
+        }
+
+        tx_thread_sleep(APP_INPUT_POLL_TICKS);
+    }
+}
+
+static const char *app_mode_name(uint8_t mode)
+{
+    switch (mode)
+    {
+        case APP_MODE_AUTO:
+            return "AUTO";
+        case APP_MODE_COOL:
+            return "COOL";
+        case APP_MODE_SLEEP:
+            return "SLEEP";
+        default:
+            return "UNKNOWN";
+    }
 }
 
 static void app_camera_display_pipe_vsync_cb(void)
@@ -312,11 +471,56 @@ static void app_display_network_output(app_display_info_t *display_info)
     line_nb += 2;
     UTIL_LCDEx_PrintfAt(0, LINE(line_nb), RIGHT_MODE, "FPS");
     line_nb += 1;
-    UTIL_LCDEx_PrintfAt(0, LINE(line_nb), RIGHT_MODE, "%.2f", 1000.0 / display_info->nn_period_ms);
+    if (display_info->nn_period_ms != 0U)
+    {
+        UTIL_LCDEx_PrintfAt(0, LINE(line_nb), RIGHT_MODE, "%.2f", 1000.0 / display_info->nn_period_ms);
+    }
+    else
+    {
+        UTIL_LCDEx_PrintfAt(0, LINE(line_nb), RIGHT_MODE, "--");
+    }
     line_nb += 2;
     UTIL_LCDEx_PrintfAt(0, LINE(line_nb), RIGHT_MODE, "Peoples");
     line_nb += 1;
     UTIL_LCDEx_PrintfAt(0, LINE(line_nb), RIGHT_MODE, "%u", display_info->nb_detect);
+
+    line_nb += 2;
+    UTIL_LCDEx_PrintfAt(0, LINE(line_nb), RIGHT_MODE, "Temp");
+    line_nb += 1;
+    if (display_info->sensor_valid != 0U)
+    {
+        UTIL_LCDEx_PrintfAt(0, LINE(line_nb), RIGHT_MODE,
+                            "%.1f C", display_info->temperature);
+    }
+    else
+    {
+        UTIL_LCDEx_PrintfAt(0, LINE(line_nb), RIGHT_MODE, "--");
+    }
+
+    line_nb += 2;
+    UTIL_LCDEx_PrintfAt(0, LINE(line_nb), RIGHT_MODE, "Humidity");
+    line_nb += 1;
+    if (display_info->sensor_valid != 0U)
+    {
+        UTIL_LCDEx_PrintfAt(0, LINE(line_nb), RIGHT_MODE,
+                            "%.1f%%", display_info->humidity);
+    }
+    else
+    {
+        UTIL_LCDEx_PrintfAt(0, LINE(line_nb), RIGHT_MODE, "--");
+    }
+
+    line_nb += 2;
+    UTIL_LCDEx_PrintfAt(0, LINE(line_nb), RIGHT_MODE, "Mode");
+    line_nb += 1;
+    UTIL_LCDEx_PrintfAt(0, LINE(line_nb), RIGHT_MODE,
+                        "%s", (display_info->power_on != 0U) ?
+                        app_mode_name(display_info->mode) : "OFF");
+    line_nb += 2;
+    UTIL_LCDEx_PrintfAt(0, LINE(line_nb), RIGHT_MODE, "Target");
+    line_nb += 1;
+    UTIL_LCDEx_PrintfAt(0, LINE(line_nb), RIGHT_MODE, "%u C",
+                        display_info->target_temperature);
 
     for (i = 0; i < display_info->nb_detect; i++)
     {

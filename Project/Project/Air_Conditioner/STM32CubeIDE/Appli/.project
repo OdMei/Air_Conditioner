@@ -231,6 +231,11 @@
 			<locationURI>PARENT-2-PROJECT_LOC/Appli/Core/Src/app.c</locationURI>
 		</link>
 		<link>
+			<name>Application/User/Core/app_input_logic.c</name>
+			<type>1</type>
+			<locationURI>PARENT-2-PROJECT_LOC/Appli/Core/Src/app_input_logic.c</locationURI>
+		</link>
+		<link>
 			<name>Application/User/Core/app_bqueue.c</name>
 			<type>1</type>
 			<locationURI>PARENT-2-PROJECT_LOC/Appli/Core/Src/app_bqueue.c</locationURI>
@@ -296,6 +301,11 @@
 			<locationURI>PARENT-2-PROJECT_LOC/Drivers/BSP/BUS/bsp_bus.c</locationURI>
 		</link>
 		<link>
+			<name>Drivers/BSP/DHT11/dht11.c</name>
+			<type>1</type>
+			<locationURI>PARENT-5-PROJECT_LOC/Drivers/BSP/DHT11/dht11.c</locationURI>
+		</link>
+		<link>
 			<name>Drivers/BSP/HyperRAM/hyperram.c</name>
 			<type>1</type>
 			<locationURI>PARENT-5-PROJECT_LOC/Drivers/BSP/HyperRAM/hyperram.c</locationURI>
@@ -306,14 +316,29 @@
 			<locationURI>PARENT-2-PROJECT_LOC/Drivers/BSP/BUS</locationURI>
 		</link>
 		<link>
+			<name>Drivers/BSP/Inc/DHT11</name>
+			<type>2</type>
+			<locationURI>PARENT-5-PROJECT_LOC/Drivers/BSP/DHT11</locationURI>
+		</link>
+		<link>
 			<name>Drivers/BSP/Inc/HyperRAM</name>
 			<type>2</type>
 			<locationURI>PARENT-5-PROJECT_LOC/Drivers/BSP/HyperRAM</locationURI>
 		</link>
 		<link>
+			<name>Drivers/BSP/Inc/KEY</name>
+			<type>2</type>
+			<locationURI>PARENT-5-PROJECT_LOC/Drivers/BSP/KEY</locationURI>
+		</link>
+		<link>
 			<name>Drivers/BSP/Inc/LCD</name>
 			<type>2</type>
 			<locationURI>PARENT-2-PROJECT_LOC/Drivers/BSP/LCD</locationURI>
+		</link>
+		<link>
+			<name>Drivers/BSP/Inc/SYS</name>
+			<type>2</type>
+			<locationURI>PARENT-5-PROJECT_LOC/Drivers/BSP/SYS</locationURI>
 		</link>
 		<link>
 			<name>Drivers/BSP/Inc/LED</name>
@@ -336,6 +361,11 @@
 			<locationURI>PARENT-2-PROJECT_LOC/Drivers/BSP/LCD/bsp_lcd.c</locationURI>
 		</link>
 		<link>
+			<name>Drivers/BSP/KEY/key.c</name>
+			<type>1</type>
+			<locationURI>PARENT-5-PROJECT_LOC/Drivers/BSP/KEY/key.c</locationURI>
+		</link>
+		<link>
 			<name>Drivers/BSP/LED/led.c</name>
 			<type>1</type>
 			<locationURI>PARENT-5-PROJECT_LOC/Drivers/BSP/LED/led.c</locationURI>
@@ -344,6 +374,11 @@
 			<name>Drivers/BSP/NORFlash/norflash.c</name>
 			<type>1</type>
 			<locationURI>PARENT-5-PROJECT_LOC/Drivers/BSP/NORFlash/norflash.c</locationURI>
+		</link>
+		<link>
+			<name>Drivers/BSP/SYS/sys.c</name>
+			<type>1</type>
+			<locationURI>PARENT-5-PROJECT_LOC/Drivers/BSP/SYS/sys.c</locationURI>
 		</link>
 		<link>
 			<name>Drivers/BSP/NORFlash/norflash_by25fq128el.c</name>

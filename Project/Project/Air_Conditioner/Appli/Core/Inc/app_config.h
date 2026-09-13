@@ -51,4 +51,12 @@
 #define AI_OBJDETECT_YOLOV2_PP_IOU_THRESHOLD    0.3f
 #define AI_OBJDETECT_YOLOV2_PP_MAX_BOXES_LIMIT  10
 
+#define APP_DEFAULT_TARGET_TEMP_C               (26U)
+#define APP_INPUT_POLL_TICKS                    (50U)
+#define APP_DHT11_PERIOD_MS                     (2000U)
+
+#define APP_MODE_AUTO                           (0U)
+#define APP_MODE_COOL                           (1U)
+#define APP_MODE_SLEEP                          (2U)
+
 #endif
