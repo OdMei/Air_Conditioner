@@ -53,6 +53,9 @@
 DMA2D_HandleTypeDef hdma2d;
 
 I2C_HandleTypeDef hi2c2;
+I2C_HandleTypeDef hi2c4;
+
+TIM_HandleTypeDef htim1;
 
 LTDC_HandleTypeDef hltdc;
 
@@ -225,6 +228,54 @@ void MX_I2C2_Init(void)
 
   /* USER CODE END I2C2_Init 2 */
 
+}
+
+void MX_I2C4_Init(void)
+{
+  hi2c4.Instance = I2C4;
+  hi2c4.Init.Timing = 0x10707DBC;
+  hi2c4.Init.OwnAddress1 = 0;
+  hi2c4.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+  hi2c4.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+  hi2c4.Init.OwnAddress2 = 0;
+  hi2c4.Init.OwnAddress2Masks = I2C_OA2_NOMASK;
+  hi2c4.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+  hi2c4.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+  if (HAL_I2C_Init(&hi2c4) != HAL_OK) { Error_Handler(); }
+  if (HAL_I2CEx_ConfigAnalogFilter(&hi2c4, I2C_ANALOGFILTER_ENABLE) != HAL_OK)
+  { Error_Handler(); }
+  if (HAL_I2CEx_ConfigDigitalFilter(&hi2c4, 0) != HAL_OK)
+  { Error_Handler(); }
+}
+
+void MX_TIM1_Init(void)
+{
+  TIM_ClockConfigTypeDef clock = {0};
+  TIM_MasterConfigTypeDef master = {0};
+  TIM_IC_InitTypeDef capture = {0};
+
+  htim1.Instance = TIM1;
+  htim1.Init.Prescaler = 400 - 1;
+  htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim1.Init.Period = 9999;
+  htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim1.Init.RepetitionCounter = 0;
+  htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim1) != HAL_OK) { Error_Handler(); }
+  clock.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim1, &clock) != HAL_OK) { Error_Handler(); }
+  if (HAL_TIM_IC_Init(&htim1) != HAL_OK) { Error_Handler(); }
+  master.MasterOutputTrigger = TIM_TRGO_RESET;
+  master.MasterOutputTrigger2 = TIM_TRGO2_RESET;
+  master.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim1, &master) != HAL_OK)
+  { Error_Handler(); }
+  capture.ICPolarity = TIM_INPUTCHANNELPOLARITY_RISING;
+  capture.ICSelection = TIM_ICSELECTION_DIRECTTI;
+  capture.ICPrescaler = TIM_ICPSC_DIV1;
+  capture.ICFilter = 3;
+  if (HAL_TIM_IC_ConfigChannel(&htim1, &capture, TIM_CHANNEL_1) != HAL_OK)
+  { Error_Handler(); }
 }
 
 /**
@@ -408,9 +459,13 @@ static void MX_RAMCFG_Init(void)
   HAL_GPIO_ConfigPinAttributes(GPIOA,GPIO_PIN_3,GPIO_PIN_SEC|GPIO_PIN_NPRIV);
   HAL_GPIO_ConfigPinAttributes(GPIOD,GPIO_PIN_4,GPIO_PIN_SEC|GPIO_PIN_NPRIV);
   HAL_GPIO_ConfigPinAttributes(GPIOD,GPIO_PIN_14,GPIO_PIN_SEC|GPIO_PIN_NPRIV);
+  HAL_GPIO_ConfigPinAttributes(GPIOD,GPIO_PIN_10,GPIO_PIN_SEC|GPIO_PIN_NPRIV);
+  HAL_GPIO_ConfigPinAttributes(GPIOB,GPIO_PIN_3,GPIO_PIN_SEC|GPIO_PIN_NPRIV);
   HAL_GPIO_ConfigPinAttributes(GPIOE,GPIO_PIN_5,GPIO_PIN_SEC|GPIO_PIN_NPRIV);
   HAL_GPIO_ConfigPinAttributes(GPIOE,GPIO_PIN_6,GPIO_PIN_SEC|GPIO_PIN_NPRIV);
   HAL_GPIO_ConfigPinAttributes(GPIOE,GPIO_PIN_10,GPIO_PIN_SEC|GPIO_PIN_NPRIV);
+  HAL_GPIO_ConfigPinAttributes(GPIOE,GPIO_PIN_9|GPIO_PIN_13|GPIO_PIN_14,
+                               GPIO_PIN_SEC|GPIO_PIN_NPRIV);
   HAL_GPIO_ConfigPinAttributes(GPIOG,GPIO_PIN_4,GPIO_PIN_SEC|GPIO_PIN_NPRIV);
   HAL_GPIO_ConfigPinAttributes(GPIOG,GPIO_PIN_6,GPIO_PIN_SEC|GPIO_PIN_NPRIV);
   HAL_GPIO_ConfigPinAttributes(GPIOG,GPIO_PIN_10,GPIO_PIN_SEC|GPIO_PIN_NPRIV);
@@ -739,6 +794,8 @@ static VOID main_thread_entry(ULONG id)
   MX_XSPI2_Init();
 #endif
   MX_USART1_UART_Init();
+  MX_I2C4_Init();
+  MX_TIM1_Init();
   MX_RAMCFG_Init();
   SystemIsolation_Config();
 

@@ -22,6 +22,8 @@
 
 extern I2C_HandleTypeDef hi2c4; /* I2C句柄 */
 
+#define AP3216C_I2C_TIMEOUT_MS (20U)
+
 /**
  * @brief   初始化AP3216C
  * @param   无
@@ -31,19 +33,27 @@ extern I2C_HandleTypeDef hi2c4; /* I2C句柄 */
  */
 uint8_t ap3216c_init(void)
 {
-    uint8_t data[1];
+    uint8_t data[1] = {0x04U};
 
-    data[0] = 0x04;
-    HAL_I2C_Mem_Write(&hi2c4, AP3216C_ADDR, 0x00, I2C_MEMADD_SIZE_8BIT, data, 1, 1000);
-    HAL_Delay(10);
-
-    data[0] = 0x03;
-    HAL_I2C_Mem_Write(&hi2c4, AP3216C_ADDR, 0x00, I2C_MEMADD_SIZE_8BIT, data, 1, 1000);
-
-    data[0] = 0x00;
-    HAL_I2C_Mem_Read(&hi2c4, AP3216C_ADDR, 0x00, I2C_MEMADD_SIZE_8BIT, data, 1, 1000);
-
-    return ((data[0] == 0x03) ? 0 : 1);
+    if (HAL_I2C_Mem_Write(&hi2c4, AP3216C_ADDR, 0x00U, I2C_MEMADD_SIZE_8BIT,
+                           data, 1U, AP3216C_I2C_TIMEOUT_MS) != HAL_OK)
+    {
+        return 1U;
+    }
+    HAL_Delay(10U);
+    data[0] = 0x03U;
+    if (HAL_I2C_Mem_Write(&hi2c4, AP3216C_ADDR, 0x00U, I2C_MEMADD_SIZE_8BIT,
+                           data, 1U, AP3216C_I2C_TIMEOUT_MS) != HAL_OK)
+    {
+        return 1U;
+    }
+    data[0] = 0U;
+    if (HAL_I2C_Mem_Read(&hi2c4, AP3216C_ADDR, 0x00U, I2C_MEMADD_SIZE_8BIT,
+                          data, 1U, AP3216C_I2C_TIMEOUT_MS) != HAL_OK)
+    {
+        return 1U;
+    }
+    return (data[0] == 0x03U) ? 0U : 1U;
 }
 
 /**
@@ -53,17 +63,47 @@ uint8_t ap3216c_init(void)
  * @param   als: ALS传感器数据
  * @retval  无
  */
+uint8_t ap3216c_read_checked(uint16_t *ir, uint16_t *ps, uint16_t *als)
+{
+    uint8_t data[6] = {0};
+    uint8_t index;
+    uint32_t started;
+    uint32_t elapsed;
+
+    if ((ir == NULL) || (ps == NULL) || (als == NULL))
+    {
+        return 1U;
+    }
+    /* Keep the documented single-register protocol. All six reads share one
+     * software deadline, rather than restarting a long timeout per byte.
+     * The vendor HAL has an additional fixed 25 ms BUSY wait on a stuck bus. */
+    started = HAL_GetTick();
+    for (index = 0U; index < sizeof(data); index++)
+    {
+        elapsed = HAL_GetTick() - started;
+        if (elapsed >= AP3216C_I2C_TIMEOUT_MS)
+        {
+            return 1U;
+        }
+        if (HAL_I2C_Mem_Read(&hi2c4, AP3216C_ADDR, 0x0AU + index,
+                              I2C_MEMADD_SIZE_8BIT, &data[index], 1U,
+                              AP3216C_I2C_TIMEOUT_MS - elapsed) != HAL_OK)
+        {
+            return 1U;
+        }
+    }
+    if ((HAL_GetTick() - started) > AP3216C_I2C_TIMEOUT_MS)
+    {
+        return 1U;
+    }
+    *ir = (data[0] & 0x80U) ? 0U : (((uint16_t)data[1] << 2U) | (data[0] & 0x03U));
+    *als = ((uint16_t)data[3] << 8U) | data[2];
+    *ps = (data[4] & 0x40U) ? 0U :
+          (((uint16_t)(data[5] & 0x3FU) << 4U) | (data[4] & 0x0FU));
+    return 0U;
+}
+
 void ap3216c_read_data(uint16_t *ir, uint16_t *ps, uint16_t *als)
 {
-    uint8_t data[6];
-    uint8_t i;
-
-    for (i = 0; i < sizeof(data) / sizeof(data[0]); i++)
-    {
-        HAL_I2C_Mem_Read(&hi2c4, AP3216C_ADDR, 0x0A + i, I2C_MEMADD_SIZE_8BIT, &data[i], 1, 1000);
-    }
-
-    *ir = (data[0] & 0x80) ? 0 : (((uint16_t)data[1] << 2) | (data[0] & 0x03));
-    *als = ((uint16_t)data[3] << 8) | data[2];
-    *ps = (data[4] & 0x40) ? 0 : (((uint16_t)(data[5] & 0x3F) << 4) | (data[4] & 0x0F));
+    (void)ap3216c_read_checked(ir, ps, als);
 }

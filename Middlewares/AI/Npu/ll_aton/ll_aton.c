@@ -16,17 +16,14 @@
  ******************************************************************************
  */
 
-#include <assert.h>
 #include <inttypes.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
 
 #include "ll_aton.h"
-
+#include "ll_aton_caches_interface.h"
 #include "ll_aton_util.h"
-
-#include "ll_aton_platform.h"
 
 #define ATONN_CONST_SRCPORT(S, J, U, I, P) ATON_##S##_##J##_LINK_##U##_##I##_##P
 #define ATONN_CONST_DSTPORT(S, J, U, I, P) ATON_##S##_DST_OFFSET(J, ATON_##S##_##J##_DST##U##_##I##_##P##_IDX)
@@ -129,12 +126,12 @@ static inline void ll_aton_static_checks(void)
 
 unsigned char *LL_Address_Physical2Virtual(unsigned char *address)
 {
-  return __LL_ATON_LIB_PHYSICAL_TO_VIRTUAL_ADDR(address);
+  return ATON_LIB_PHYSICAL_TO_VIRTUAL_ADDR(address);
 }
 
 unsigned char *LL_Address_Virtual2Physical(unsigned char *address)
 {
-  return __LL_ATON_LIB_VIRTUAL_TO_PHYSICAL_ADDR(address);
+  return ATON_LIB_VIRTUAL_TO_PHYSICAL_ADDR(address);
 }
 
 /**
@@ -150,7 +147,7 @@ LL_ATON_WEAK int startWatchdog(uint32_t timeout)
 }
 
 /**
- * @brief Checkes whether watchdog has expired or not
+ * @brief Checks whether watchdog has expired or not
  * @retval ATON Error code
  */
 LL_ATON_WEAK int checkWatchdog(void)
@@ -296,7 +293,7 @@ int LL_ATON_DeInit(void)
 /**
  * @brief  Enables a set of ATON units
  * @param  LL_ATON_EnableUnits_InitStruct Array of units to enable
- * @param  n Lenght of the initialization array
+ * @param  n Length of the initialization array
  * @retval Error code
  * @todo   Add boundary checks
  */
@@ -396,35 +393,35 @@ int LL_ATON_DisableUnits_Init(const LL_ATON_DisableUnits_InitTypeDef *LL_ATON_Di
     {
 #ifdef ATON_STRENG_NUM
     case STRENG:
-      ATON_DISABLE_CLR_CONFCLR(STRENG, unitId);
+      ATON_DISABLE(STRENG, unitId);
       LL_ATON_DisableClock(ATON_STRENG_CLKB_CLK(unitId));
       break;
 #endif
 
 #ifdef ATON_CONVACC_NUM
     case CONVACC:
-      ATON_DISABLE_CLR_CONFCLR(CONVACC, unitId);
+      ATON_DISABLE(CONVACC, unitId);
       LL_ATON_DisableClock(ATON_CONVACC_CLKB_CLK(unitId));
       break;
 #endif
 
 #ifdef ATON_DECUN_NUM
     case DECUN:
-      ATON_DISABLE_CLR_CONFCLR(DECUN, unitId);
+      ATON_DISABLE(DECUN, unitId);
       LL_ATON_DisableClock(ATON_DECUN_CLKB_CLK(unitId));
       break;
 #endif
 
 #ifdef ATON_ACTIV_NUM
     case ACTIV:
-      ATON_DISABLE_CLR_CONFCLR(ACTIV, unitId);
+      ATON_DISABLE(ACTIV, unitId);
       LL_ATON_DisableClock(ATON_ACTIV_CLKB_CLK(unitId));
       break;
 #endif
 
 #ifdef ATON_ARITH_NUM
     case ARITH:
-      ATON_DISABLE_CLR_CONFCLR(ARITH, unitId);
+      ATON_DISABLE(ARITH, unitId);
       LL_ATON_DisableClock(ATON_ARITH_CLKB_CLK(unitId));
       break;
 #endif
@@ -434,7 +431,7 @@ int LL_ATON_DisableUnits_Init(const LL_ATON_DisableUnits_InitTypeDef *LL_ATON_Di
 #ifdef POOL_RC14
       ATON_POOL_CTRL_SET(unitId, ATON_POOL_CTRL_SET_EN(ATON_POOL_CTRL_GET(unitId), 0));
 #else  // !POOL_RC14
-      ATON_DISABLE_CLR_CONFCLR(POOL, unitId);
+      ATON_DISABLE(POOL, unitId);
 #endif // !POOL_RC14
 
       LL_ATON_DisableClock(ATON_POOL_CLKB_CLK(unitId));
@@ -443,7 +440,7 @@ int LL_ATON_DisableUnits_Init(const LL_ATON_DisableUnits_InitTypeDef *LL_ATON_Di
 
 #ifdef ATON_RECBUF_NUM
     case RECBUF:
-      ATON_DISABLE_CLR_CONFCLR(RECBUF, unitId);
+      ATON_DISABLE(RECBUF, unitId);
       LL_ATON_DisableClock(ATON_RECBUF_CLKB_CLK(unitId));
       break;
 #endif
@@ -644,8 +641,8 @@ int LL_Streng_TensorInit(int id, const LL_Streng_TensorInitTypeDef *conf, int n)
   ATON_STRENG_CTRL_SET(id, t);
 
   // ATON_STRENG_ADDR_SET(id, conf->addr_start.i);
-  LL_ATON_REG_WRITE_RELOC(((volatile uint32_t *)(uintptr_t)ATON_STRENG_ADDR_ADDR(id)), conf->addr_base.i,
-                          conf->offset_start);
+  ATON_REG_WRITE_RELOC(((volatile uint32_t *)(uintptr_t)ATON_STRENG_ADDR_ADDR(id)), conf->addr_base.i,
+                       conf->offset_start);
 
   if (conf->raw)
   {
@@ -681,9 +678,19 @@ int LL_Streng_TensorInit(int id, const LL_Streng_TensorInitTypeDef *conf, int n)
     ATON_STRENG_DEPTH_SET(id, t);
   }
 
+  ATON_STRENG_FOFFSET_SET(id, conf->frame_offset);
+
+  /* Frame repetition loop configuration */
   ATON_STRENG_FRPTOFF_SET(id, conf->loop_offset);
   ATON_STRENG_FRAME_RPT_SET(id, conf->frame_loop_cnt);
-  ATON_STRENG_FOFFSET_SET(id, conf->frame_offset);
+
+  /* Second level frame repetition loop configuration (if available) */
+#ifdef ATON_STRENG_FRAME_RPT2_DT
+  if (conf->frame_loop_cnt2 != ATON_STRENG_FRAME_RPT2_DT)
+    ATON_STRENG_FRAME_RPT2_SET(id, conf->frame_loop_cnt2);
+  if (conf->loop_offset2 != ATON_STRENG_FRPTOFF2_DT)
+    ATON_STRENG_FRPTOFF2_SET(id, conf->loop_offset2);
+#endif
 
   t = ATON_STRENG_LIMITEN_DT; // all other fields set to zero
   t = ATON_STRENG_LIMITEN_SET_FRAMELIMIT(t, 1);
@@ -699,8 +706,8 @@ int LL_Streng_TensorInit(int id, const LL_Streng_TensorInitTypeDef *conf, int n)
     ATON_STRENG_LIMITEN_SET(id, t);
     // NOTE: limiter is to be set to last accessible byte address
     // ATON_STRENG_LIMITADDR_SET(id, (conf->addr_limit.i - 1));
-    LL_ATON_REG_WRITE_RELOC(((volatile uint32_t *)(uintptr_t)ATON_STRENG_LIMITADDR_ADDR(id)), conf->addr_base.i,
-                            conf->offset_limit - 1);
+    ATON_REG_WRITE_RELOC(((volatile uint32_t *)(uintptr_t)ATON_STRENG_LIMITADDR_ADDR(id)), conf->addr_base.i,
+                         conf->offset_limit - 1);
   }
 
   ATON_STRENG_LIMIT_SET(id, conf->frame_tot_cnt);
@@ -754,12 +761,13 @@ int LL_Streng_TensorInit(int id, const LL_Streng_TensorInitTypeDef *conf, int n)
   ATON_STRENG_EVENT_SET(id, t_streng_event);
 
   /* Ciphering settings */
-#if (ATON_STRENG_VERSION_ENCR_DT == 1)
-  t = ATON_STRENG_ENCR_MSB_DT;
-  t = ATON_STRENG_ENCR_MSB_SET_EN(t, conf->cipher_en);
-  t = ATON_STRENG_ENCR_MSB_SET_KEY_SEL(t, conf->key_sel);
-  ATON_STRENG_ENCR_MSB_SET(id, t);
-#endif
+  if (ATON_STRENG_ENCRYPTION_EN(id))
+  {
+    t = ATON_STRENG_ENCR_MSB_DT;
+    t = ATON_STRENG_ENCR_MSB_SET_EN(t, conf->cipher_en);
+    t = ATON_STRENG_ENCR_MSB_SET_KEY_SEL(t, conf->key_sel);
+    ATON_STRENG_ENCR_MSB_SET(id, t);
+  }
 
   return 0;
 }
@@ -805,8 +813,14 @@ int LL_TriggerHigh(int irq)
   if (irq >= ATON_INTCTRL_INTS(0))
     return LL_ATON_INVALID_PARAM;
 
+    /* Check if interrupt falls in the hi-register, e.g.: Puma */
+#ifdef ATON_INTCTRL_INTORMSK_H_INT_EPOCHCTRL_0_1_GET_IDX
+  ATON_INTCTRL_INTORMSK_H_SET(0, irq, ~(1 << (ATON_INTCTRL_0_INTORMSK_H_EPOCHCTRL_0_1_IDX - 32)));
+  ATON_INTCTRL_INTSET_H_SET(0, (1 << (ATON_INTCTRL_0_INTSET_H_EPOCHCTRL_0_1_IDX - 32)));
+#else
   ATON_INTCTRL_INTORMSK_SET(0, irq, ~(1 << ATON_INTCTRL_0_INTORMSK_EPOCHCTRL_0_1_IDX));
   ATON_INTCTRL_INTSET_SET(0, (1 << ATON_INTCTRL_0_INTSET_EPOCHCTRL_0_1_IDX));
+#endif
   return 0;
 }
 
@@ -819,14 +833,18 @@ int LL_TriggerLow(int irq)
 {
   if (irq >= ATON_INTCTRL_INTS(0))
     return LL_ATON_INVALID_PARAM;
-
+#ifdef ATON_INTCTRL_0_INTCLR_H_EPOCHCTRL_0_1_IDX
+  ATON_INTCTRL_INTCLR_H_SET(0, (1 << (ATON_INTCTRL_0_INTCLR_H_EPOCHCTRL_0_1_IDX - 32)));
+#else
   ATON_INTCTRL_INTCLR_SET(0, (1 << ATON_INTCTRL_0_INTCLR_EPOCHCTRL_0_1_IDX));
+#endif
+
   return 0;
 }
 #endif
 
-unsigned __atonn_getSrcPortID(enum SwitchUnitsType sut, unsigned char su_num, enum AccelUnitsType aut,
-                              unsigned char au_num, unsigned char port)
+unsigned int __atonn_getSrcPortID(enum SwitchUnitsType sut, unsigned char su_num, enum AccelUnitsType aut,
+                                  unsigned char au_num, unsigned char port)
 {
   // FIXME
   LL_ATON_ASSERT(su_num == 0);
@@ -894,8 +912,8 @@ unsigned __atonn_getSrcPortID(enum SwitchUnitsType sut, unsigned char su_num, en
   return 0;
 }
 
-unsigned __atonn_getDstPortID(enum SwitchUnitsType sut, unsigned char su_num, enum AccelUnitsType aut,
-                              unsigned char au_num, unsigned char port)
+unsigned int __atonn_getDstPortID(enum SwitchUnitsType sut, unsigned char su_num, enum AccelUnitsType aut,
+                                  unsigned char au_num, unsigned char port)
 {
   // FIXME
   LL_ATON_ASSERT(su_num == 0);
@@ -979,11 +997,6 @@ int LL_Switch_Init_NoReset(const LL_Switch_InitTypeDef *LL_Switch_InitStruct, in
   unsigned int fnr_shift[ATON_SWITCH_CONTEXT_NUM] = {ATON_STRSWITCH_DST_FNR0_LSB, ATON_STRSWITCH_DST_FNR1_LSB};
   unsigned int fnr_mask[ATON_SWITCH_CONTEXT_NUM] = {ATON_STRSWITCH_DST_FNR0_MASK, ATON_STRSWITCH_DST_FNR1_MASK};
 
-  /* Enable Switch */
-  t = ATON_STRSWITCH_CTRL_DT;
-  t = ATON_STRSWITCH_CTRL_SET_EN(t, 1);
-  ATON_STRSWITCH_CTRL_SET(0, t);
-
   for (i = 0; i < n; i++)
   {
     /* Compute target destination configuration register */
@@ -1007,8 +1020,13 @@ int LL_Switch_Init_NoReset(const LL_Switch_InitTypeDef *LL_Switch_InitStruct, in
     }
 #endif
 
-    LL_ATON_REG_WRITE(reg, t);
+    ATON_REG_WRITE(reg, t);
   }
+
+  /* enable the Stream Switch */
+  t = ATON_STRSWITCH_CTRL_DT;
+  t = ATON_STRSWITCH_CTRL_SET_EN(t, 1);
+  ATON_STRSWITCH_CTRL_SET(0, t);
 
   return 0;
 }
@@ -1021,14 +1039,9 @@ int LL_Switch_Init_NoReset(const LL_Switch_InitTypeDef *LL_Switch_InitStruct, in
  */
 int LL_Switch_Init(const LL_Switch_InitTypeDef *LL_Switch_InitStruct, int n)
 {
-  uint32_t t;
-
 #if (LL_ATON_PLATFORM == LL_ATON_PLAT_EC_TRACE)
   ll_aton_static_checks();
 #endif
-
-  /* Clear Configuration */
-  ATON_DISABLE_CLR_CONFCLR(STRSWITCH, 0);
 
   return LL_Switch_Init_NoReset(LL_Switch_InitStruct, n);
 }
@@ -1044,13 +1057,18 @@ int LL_Switch_Deinit(const LL_Switch_InitTypeDef *LL_Switch_InitStruct, int n)
   int i;
   volatile uint32_t *reg;
 
+  uint32_t t;
+
+  /* Clear Configuration */
+  ATON_DISABLE_CLR_CONFCLR(STRSWITCH, 0);
+
   for (i = 0; i < n; i++)
   {
     /* Compute target destination configuration register */
     reg = (uint32_t *)(ATON_STRSWITCH_BASE(0) + ATONN_DSTPORT_ID(LL_Switch_InitStruct[i].dest));
 
     /* Disable contexts */
-    LL_ATON_REG_WRITE(reg, 0);
+    ATON_REG_WRITE(reg, 0);
   }
 
   return 0;
@@ -1068,6 +1086,11 @@ int LL_Switch_Deinit_Fine_Grained(const LL_Switch_InitTypeDef *LL_Switch_InitStr
   volatile uint32_t *reg;
   unsigned int en_shift[ATON_SWITCH_CONTEXT_NUM] = {ATON_STRSWITCH_DST_EN0_LSB, ATON_STRSWITCH_DST_EN1_LSB};
 
+  uint32_t t;
+
+  /* Clear Configuration */
+  ATON_DISABLE_CLR_CONFCLR(STRSWITCH, 0);
+
   for (i = 0; i < n; i++)
   {
     /* Compute target destination configuration register */
@@ -1083,7 +1106,7 @@ int LL_Switch_Deinit_Fine_Grained(const LL_Switch_InitTypeDef *LL_Switch_InitStr
     for (c = 0; c < ATON_SWITCH_CONTEXT_NUM; c++)
       t &= ~((LL_Switch_InitStruct[i].context[c] != 0) << en_shift[c]);
 #endif
-    LL_ATON_REG_WRITE(reg, t);
+    ATON_REG_WRITE(reg, t);
   }
 
   return 0;
@@ -1106,11 +1129,6 @@ int LL_SwitchVC_Init_NoReset(const LL_SwitchVC_InitTypeDef *LL_SwitchVC_InitStru
   unsigned int en_shift = ATON_STRSWITCH_VC_DST_EN_LSB;
   unsigned int src_shift = ATON_STRSWITCH_VC_DST_SRC_LSB;
 
-  /* Enable Switch */
-  t = ATON_STRSWITCH_VC_CTRL_DT;
-  t = ATON_STRSWITCH_VC_CTRL_SET_EN(t, 1);
-  ATON_STRSWITCH_VC_CTRL_SET(0, t);
-
   for (i = 0; i < n; i++)
   {
     /* Compute target destination configuration register */
@@ -1119,8 +1137,13 @@ int LL_SwitchVC_Init_NoReset(const LL_SwitchVC_InitTypeDef *LL_SwitchVC_InitStru
     /* Enable Context and create link */
     t |= (1 << en_shift);
     t |= (ATONN_SRCPORT_ID(LL_SwitchVC_InitStruct[i].source) << src_shift);
-    LL_ATON_REG_WRITE(reg, t);
+    ATON_REG_WRITE(reg, t);
   }
+
+  /* enable the Stream Switch */
+  t = ATON_STRSWITCH_CTRL_DT;
+  t = ATON_STRSWITCH_CTRL_SET_EN(t, 1);
+  ATON_STRSWITCH_CTRL_SET(0, t);
 
   return 0;
 }
@@ -1134,11 +1157,6 @@ int LL_SwitchVC_Init_NoReset(const LL_SwitchVC_InitTypeDef *LL_SwitchVC_InitStru
  */
 int LL_SwitchVC_Init(const LL_SwitchVC_InitTypeDef *LL_SwitchVC_InitStruct, int n)
 {
-  uint32_t t;
-
-  /* Clear Configuration */
-  ATON_DISABLE_CLR_CONFCLR(STRSWITCH_VC, 0);
-
   return LL_SwitchVC_Init_NoReset(LL_SwitchVC_InitStruct, n);
 }
 
@@ -1153,13 +1171,18 @@ int LL_SwitchVC_Deinit(const LL_SwitchVC_InitTypeDef *LL_SwitchVC_InitStruct, in
   int i;
   volatile uint32_t *reg;
 
+  uint32_t t;
+
+  /* Clear Configuration */
+  ATON_DISABLE_CLR_CONFCLR(STRSWITCH_VC, 0);
+
   for (i = 0; i < n; i++)
   {
     /* Compute target destination configuration register */
     reg = (uint32_t *)(ATON_STRSWITCH_VC_BASE(0) + ATONN_DSTPORT_ID(LL_SwitchVC_InitStruct[i].dest));
 
     /* Disable contexts */
-    LL_ATON_REG_WRITE(reg, 0);
+    ATON_REG_WRITE(reg, 0);
   }
 
   return 0;
@@ -1177,6 +1200,11 @@ int LL_SwitchVC_Deinit_Fine_Grained(const LL_SwitchVC_InitTypeDef *LL_SwitchVC_I
   volatile uint32_t *reg;
   unsigned int en_shift = ATON_STRSWITCH_VC_DST_EN_LSB;
 
+  uint32_t t;
+
+  /* Clear Configuration */
+  ATON_DISABLE_CLR_CONFCLR(STRSWITCH_VC, 0);
+
   for (i = 0; i < n; i++)
   {
     /* Compute target destination configuration register */
@@ -1185,7 +1213,7 @@ int LL_SwitchVC_Deinit_Fine_Grained(const LL_SwitchVC_InitTypeDef *LL_SwitchVC_I
     /* Disable context */
     uint32_t t = *reg;
     t &= ~(1 << en_shift);
-    LL_ATON_REG_WRITE(reg, t);
+    ATON_REG_WRITE(reg, t);
   }
 
   return 0;
@@ -1205,9 +1233,9 @@ static inline uint32_t decun_inc_page_addr(int id, uint32_t ctrl_val)
 
 static void LL_Decun_CB_1byte(int id, const LL_Decun_InitTypeDef *conf, uint32_t ctrl_val)
 {
-  unsigned CBsize = conf->CBs_size;
-  unsigned i, k;
-  unsigned mem_idx_num = ATON_DECUN_MEM_LOW_IDX_MAX - ATON_DECUN_MEM_LOW_IDX_MIN + 1;
+  int CBsize = conf->CBs_size;
+  int i, k;
+  int mem_idx_num = ATON_DECUN_MEM_LOW_IDX_MAX - ATON_DECUN_MEM_LOW_IDX_MIN + 1;
 
   if (conf->nCWperCV == 1)
   {
@@ -1360,9 +1388,9 @@ static void LL_Decun_CB_1byte(int id, const LL_Decun_InitTypeDef *conf, uint32_t
 
 static void LL_Decun_CB_2byte(int id, const LL_Decun_InitTypeDef *conf, uint32_t ctrl_val)
 {
-  unsigned CBsize = conf->CBs_size / 2;
-  unsigned i, k;
-  unsigned mem_idx_num = ATON_DECUN_MEM_LOW_IDX_MAX - ATON_DECUN_MEM_LOW_IDX_MIN + 1;
+  int CBsize = conf->CBs_size / 2;
+  int i, k;
+  int mem_idx_num = ATON_DECUN_MEM_LOW_IDX_MAX - ATON_DECUN_MEM_LOW_IDX_MIN + 1;
 
   if (conf->nCWperCV == 1)
   {
@@ -1551,7 +1579,7 @@ static void LL_Decun_CB_2byte(int id, const LL_Decun_InitTypeDef *conf, uint32_t
 
 /**
  * @brief  Configures Decompression Unit accelerator
- * @param  id Decompression Unit identifier (Always 0 fo Tiny Orlando)
+ * @param  id Decompression Unit identifier (Always 0 for Tiny Orlando)
  * @param  conf Pointer to structure describing decompression unit configuration
  * @retval Error code
  */
@@ -1682,13 +1710,17 @@ int LL_Convacc_Init(int id, const LL_Convacc_InitTypeDef *conf)
     t = ATON_CONVACC_KFILT_SET_LAST(t, conf->kfilt_last);
     ATON_CONVACC_KFILT_SET(id, t);
   }
+  else
+  {
+    ATON_CONVACC_KFILT_SET(id, ATON_CONVACC_KFILT_DT);
+  }
 
   t = ATON_CONVACC_DFORMAT_DT;
   t = ATON_CONVACC_DFORMAT_SET_FROUND(t, conf->rounding_f);
   t = ATON_CONVACC_DFORMAT_SET_FSAT(t, conf->saturation_f);
   t = ATON_CONVACC_DFORMAT_SET_FRNDMODE(t, conf->round_mode_f);
   t = ATON_CONVACC_DFORMAT_SET_FBYTES(t, conf->inbytes_f);
-  t = ATON_CONVACC_DFORMAT_SET_FSHIFT(t, LL_ATON_SHIFT(conf->shift_f));
+  t = ATON_CONVACC_DFORMAT_SET_FSHIFT(t, ATON_SHIFT(conf->shift_f));
 
   t = ATON_CONVACC_DFORMAT_SET_ROUND(t, conf->rounding_o);
   t = ATON_CONVACC_DFORMAT_SET_SAT(t, conf->saturation_o);
@@ -1729,19 +1761,19 @@ int LL_Convacc_Init(int id, const LL_Convacc_InitTypeDef *conf)
 
 #if defined(ATON_CONVACC_CTRL_GET_DEEPMODE)
   // no pad mode available in 1x1 deepmode
-  // will accomodate padding only with zframe below
+  // will accommodate padding only with zframe below
   if (conf->deepmode != 0)
     p_top = p_bot = p_left = p_right = 0;
 #endif
 #if defined(ATON_CONVACC_CTRL_GET_DSS2MODE)
   // no pad mode available in dss2mode
-  // will accomodate padding only with zframe below
+  // will accommodate padding only with zframe below
   if (conf->dss2mode != 0)
     p_top = p_bot = p_left = p_right = 0;
 #endif
 #if defined(ATON_CONVACC_ZFBIAS_SET)
   // no pad mode available if zfbias is set
-  // will accomodate padding only with zframe below
+  // will accommodate padding only with zframe below
   if (conf->zfbias != 0)
     p_top = p_bot = p_left = p_right = 0;
 #endif
@@ -1789,7 +1821,7 @@ int LL_Convacc_Init(int id, const LL_Convacc_InitTypeDef *conf)
   // LL_ATON_PRINTF("c_t=%d c_b=%d c_l=%d c_r=%d\n",conf->top_crop,conf->bot_crop,conf->left_crop  *
   // conf->batchDepth,conf->right_crop  * conf->batchDepth + (conf->batchDepth - 1));
 
-#if defined(ATON_CONVACC_FSUB_SET)
+#if defined(ATON_CONVACC_FSUB_SET_FSUB)
   if (conf->fsub != 0)
   {
     t = ATON_CONVACC_FSUB_DT;
@@ -1797,13 +1829,31 @@ int LL_Convacc_Init(int id, const LL_Convacc_InitTypeDef *conf)
     ATON_CONVACC_FSUB_SET(id, t);
   }
 #endif
+#if defined(ATON_CONVACC_FSUB_SET_VSHIFT)
+  if (conf->vshift != 0)
+  {
+    t = ATON_CONVACC_FSUB_GET(id);
+    t = ATON_CONVACC_FSUB_SET_VSHIFT(t, conf->vshift);
+    // LL_ATON_PRINTF("SETTING VSHIFT %d\n", conf->vshift);
+    ATON_CONVACC_FSUB_SET(id, t);
+    // LL_ATON_PRINTF("SETTING VSHIFT %d\n", t);
+    // LL_ATON_PRINTF("FSUB VALUE : %d", ATON_CONVACC_FSUB_GET(id));
+  }
+#endif
 #if defined(ATON_CONVACC_ZFBIAS_SET)
+  t = ATON_CONVACC_ZFBIAS_DT;
   if (conf->zfbias != 0)
   {
-    t = ATON_CONVACC_ZFBIAS_DT;
     t = ATON_CONVACC_ZFBIAS_SET_ZFBIAS(t, conf->zfbias);
-    ATON_CONVACC_ZFBIAS_SET(id, t);
   }
+
+  /* If hardware supports it (e.g.: 4CA2P), manage Batch Depths not fitting 8 bits */
+#if defined(ATON_CONVACC_ZFBIAS_SET_ZFLEFTMSB)
+  t = ATON_CONVACC_ZFBIAS_SET_ZFLEFTMSB(t, (z_left * conf->batchDepth) >> ATON_CONVACC_ZFRAME_LEFT_W);
+  t = ATON_CONVACC_ZFBIAS_SET_ZFRIGHTMSB(t, (z_right * conf->batchDepth) >> ATON_CONVACC_ZFRAME_RIGHT_W);
+#endif
+
+  ATON_CONVACC_ZFBIAS_SET(id, t);
 #endif
 
   return 0;
@@ -1853,7 +1903,7 @@ int LL_Activacc_Init(int id, const LL_Activacc_InitTypeDef *conf)
   t = ATON_ACTIV_CTRL_DT;
   t = ATON_ACTIV_CTRL_SET_TYPE(t, get_Activacc_type(conf->operation));
   t = ATON_ACTIV_CTRL_SET_FBYTES(t, conf->inbytes_f);
-  t = ATON_ACTIV_CTRL_SET_FSHIFT(t, LL_ATON_SHIFT(conf->shift_f));
+  t = ATON_ACTIV_CTRL_SET_FSHIFT(t, ATON_SHIFT(conf->shift_f));
   t = ATON_ACTIV_CTRL_SET_FROUND(t, conf->rounding_f);
   t = ATON_ACTIV_CTRL_SET_FSAT(t, (conf->saturation_f != 0));
   t = ATON_ACTIV_CTRL_SET_FRNDMODE(t, conf->round_mode_f);
@@ -1909,7 +1959,7 @@ int LL_Activacc_Init(int id, const LL_Activacc_InitTypeDef *conf)
 
     {
       uint8_t *R0p = (uint8_t *)conf->ROM0_vector.p;
-      unsigned ROM0_rows = conf->ROM0_nbytes / (1 * 1);
+      int ROM0_rows = conf->ROM0_nbytes / (1 * 1);
       for (int i = 0; i < ROM0_rows; i++)
       {
         t = ATON_ACTIV_ROM0_DT;
@@ -1919,7 +1969,7 @@ int LL_Activacc_Init(int id, const LL_Activacc_InitTypeDef *conf)
     }
     {
       uint16_t *R1p = (uint16_t *)conf->ROM1_vector.p;
-      unsigned ROM1_rows = conf->ROM1_nbytes / (3 * 2);
+      int ROM1_rows = conf->ROM1_nbytes / (3 * 2);
       for (int i = 0; i < ROM1_rows; i++)
       {
         t = ATON_ACTIV_ROM1_AB_DT;
@@ -1948,7 +1998,7 @@ int LL_Activacc_Init(int id, const LL_Activacc_InitTypeDef *conf)
     }
   }
 #else
-    assert("Unsupported Activation LUT configuration");
+    LL_ATON_ASSERT("Unsupported Activation LUT configuration");
 #endif
   break;
   default:
@@ -2055,14 +2105,14 @@ int LL_Arithacc_Init(int id, const LL_Arithacc_InitTypeDef *conf)
 
   t = ATON_ARITH_INSHIFTER_DT;
   t = ATON_ARITH_INSHIFTER_SET_FBYTESX(t, conf->inbytes_x);
-  t = ATON_ARITH_INSHIFTER_SET_FSHIFTX(t, LL_ATON_SHIFT(conf->shift_x));
+  t = ATON_ARITH_INSHIFTER_SET_FSHIFTX(t, ATON_SHIFT(conf->shift_x));
   t = ATON_ARITH_INSHIFTER_SET_FROUNDX(t, (conf->rounding_x != 0));
   t = ATON_ARITH_INSHIFTER_SET_FSATX(t, (conf->saturation_x != 0));
   t = ATON_ARITH_INSHIFTER_SET_FRNDMODEX(t, conf->round_mode_x);
   t = ATON_ARITH_INSHIFTER_SET_FOBYTESX(t, conf->outbytes_x);
 
   t = ATON_ARITH_INSHIFTER_SET_FBYTESY(t, conf->inbytes_y);
-  t = ATON_ARITH_INSHIFTER_SET_FSHIFTY(t, LL_ATON_SHIFT(conf->shift_y));
+  t = ATON_ARITH_INSHIFTER_SET_FSHIFTY(t, ATON_SHIFT(conf->shift_y));
   t = ATON_ARITH_INSHIFTER_SET_FROUNDY(t, (conf->rounding_y != 0));
   t = ATON_ARITH_INSHIFTER_SET_FSATY(t, (conf->saturation_y != 0));
   t = ATON_ARITH_INSHIFTER_SET_FRNDMODEY(t, conf->round_mode_y);
@@ -2203,7 +2253,7 @@ int LL_Arithacc_Init(int id, const LL_Arithacc_InitTypeDef *conf)
 
     int32_t c_sign = (conf->C_scalar == -1 ? -1 : 1);
 #if (LL_ATON_PLATFORM == LL_ATON_PLAT_EC_TRACE)
-    ec_trace_comment("Block ECASM optimizations to move reg writes pass this point");
+    ec_trace_comment("Block ECASM write optimizations at this point");
 #endif
     ATON_ARITH_TRANSLATEADDR_SET(id, 1); // map 0x400 onto 0x0 offset for coefficients
     for (i = 0, k = 0; i < maxc; i++, k++)
@@ -2212,7 +2262,8 @@ int LL_Arithacc_Init(int id, const LL_Arithacc_InitTypeDef *conf)
       uint32_t A = Ap != NULL ? LL_ATON_getbits(Ap, bitcnt_A, nbits_A) : (uint32_t)conf->A_scalar;
       uint32_t B = Bp != NULL ? LL_ATON_getbits(Bp, bitcnt_B, nbits_B) : (uint32_t)conf->B_scalar;
       uint32_t C = Cp != NULL ? (c_sign * LL_ATON_getbits(Cp, bitcnt_C, nbits_C)) : (uint32_t)conf->C_scalar;
-      if (conf->combinebc)
+      LL_ATON_ASSERT(conf->combinebc == 0 || (Cp == NULL && Bp == NULL) || (Cp != NULL && Bp == NULL));
+      if (conf->combinebc && Cp != NULL)
       {
         B = (C >> 16);
         C = (C & 0xFFFF);
@@ -2220,7 +2271,7 @@ int LL_Arithacc_Init(int id, const LL_Arithacc_InitTypeDef *conf)
       if (k == mem_idx_num)
       {
 #if (LL_ATON_PLATFORM == LL_ATON_PLAT_EC_TRACE)
-        ec_trace_comment("Block ECASM optimizations to move reg writes pass this point");
+        ec_trace_comment("Block ECASM write optimizations at this point");
 #endif
         ATON_ARITH_TRANSLATEADDR_SET(id, 0); // map 0xC00 onto 0xC00 offset for coefficients
         k -= (256 / 2);
@@ -2298,7 +2349,7 @@ int LL_Poolacc_Init(int id, const LL_Poolacc_InitTypeDef *conf)
   t = ATON_POOL_CTRL_SET_SAT(t, (conf->saturation_o != 0));
   t = ATON_POOL_CTRL_SET_OUTSHIFT(t, conf->shift_o);
   t = ATON_POOL_CTRL_SET_FBYTES(t, conf->inbytes_f);
-  t = ATON_POOL_CTRL_SET_FSHIFT(t, LL_ATON_SHIFT(conf->shift_f));
+  t = ATON_POOL_CTRL_SET_FSHIFT(t, ATON_SHIFT(conf->shift_f));
   t = ATON_POOL_CTRL_SET_FROUND(t, (conf->rounding_f != 0));
   t = ATON_POOL_CTRL_SET_FSAT(t, (conf->saturation_f != 0));
 #ifdef ATON_POOL_CTRL_SET_AVGNOPAD
@@ -2479,7 +2530,7 @@ int LL_EpochCtrl_Wait(uint32_t mask)
  */
 unsigned int LL_EpochCtrl_GetBlobSize(uint32_t *eb_addr)
 {
-  unsigned bloblines = eb_addr[1] + 2;
+  unsigned int bloblines = eb_addr[1] + 2;
   return bloblines * 4;
 }
 #endif // ATON_EPOCHCTRL_NUM
@@ -2487,14 +2538,34 @@ unsigned int LL_EpochCtrl_GetBlobSize(uint32_t *eb_addr)
 void LL_ATON_EnableClock(unsigned int clock)
 {
 #if (LL_ATON_ENABLE_CLOCK_GATING == 1)
-  LL_ATON_REG_WRITE_FIELD_RANGE(CLKCTRL, 0, BGATES, clock, 1, 1);
+  if (clock <= 31)
+  {
+    ATON_REG_WRITE_FIELD_RANGE(CLKCTRL, 0, BGATES, clock, 1, 1);
+  }
+#ifdef ATON_CLKCTRL_BGATES1_OFFSET
+  else
+  {
+    clock -= 32;
+    ATON_REG_WRITE_FIELD_RANGE(CLKCTRL, 0, BGATES1, clock, 1, 1);
+  }
+#endif
 #endif
 }
 
 void LL_ATON_DisableClock(unsigned int clock)
 {
 #if (LL_ATON_ENABLE_CLOCK_GATING == 1)
-  LL_ATON_REG_WRITE_FIELD_RANGE(CLKCTRL, 0, BGATES, clock, 1, 0);
+  if (clock <= 31)
+  {
+    ATON_REG_WRITE_FIELD_RANGE(CLKCTRL, 0, BGATES, clock, 1, 0);
+  }
+#ifdef ATON_CLKCTRL_BGATES1_OFFSET
+  else
+  {
+    clock -= 32;
+    ATON_REG_WRITE_FIELD_RANGE(CLKCTRL, 0, BGATES1, clock, 1, 0);
+  }
+#endif
 #endif
 }
 
@@ -2519,9 +2590,7 @@ void LL_ATON_DisableClock(unsigned int clock)
 #define MIN_BUFF_LEN 40
 LL_ATON_WEAK void *LL_ATON_Dma_memcpy(void *dst, void *src, void *src_limit, size_t n, int dst_cached, int src_cached)
 {
-#if (LL_ATON_PLATFORM == LL_ATON_PLAT_STM32N6)
   uint8_t *_dst_orig = dst;
-#endif // (LL_ATON_PLATFORM == LL_ATON_PLAT_STM32N6)
 
   int prolog_len = (n % 3);
   int i;
@@ -2536,18 +2605,11 @@ LL_ATON_WEAK void *LL_ATON_Dma_memcpy(void *dst, void *src, void *src_limit, siz
     *_dst++ = *_src++;
   n -= prolog_len;
 
-#if (LL_ATON_PLATFORM == LL_ATON_PLAT_STM32N6)
   if (prolog_len > 0)
   {
-    LL_ATON_LOCK_MCU_CACHE();
-
     /* *** MCU cache clean & invalidate operation (SW) *** */
-    mcu_cache_clean_invalidate_range(__LL_ATON_LIB_PHYSICAL_TO_VIRTUAL_ADDR((uintptr_t)_dst_orig),
-                                     __LL_ATON_LIB_PHYSICAL_TO_VIRTUAL_ADDR((uintptr_t)(_dst_orig + prolog_len)));
-
-    LL_ATON_UNLOCK_MCU_CACHE();
+    LL_ATON_Cache_MCU_Clean_Invalidate_Range(ATON_LIB_PHYSICAL_TO_VIRTUAL_ADDR((uintptr_t)_dst_orig), prolog_len);
   }
-#endif // (LL_ATON_PLATFORM == LL_ATON_PLAT_STM32N6)
 
   if (n > 0)
   {
@@ -2610,19 +2672,20 @@ LL_ATON_WEAK void *LL_ATON_Dma_memcpy(void *dst, void *src, void *src_limit, siz
       dma_out.cache_allocate = 1;
     }
 
-    const LL_Switch_InitTypeDef switch_init = {LL_Switch_Init_Dest() = ATONN_DSTPORT(STRSWITCH, 0, STRENG, 1, 0),
-                                               LL_Switch_Init_Source(0) = ATONN_SRCPORT(STRSWITCH, 0, STRENG, 0, 0),
-                                               LL_Switch_Init_Context(0) = 1, LL_Switch_Init_Frames(0) = 0};
+    const LL_Switch_InitTypeDef __ll_switch_init = {LL_Switch_Init_Dest() = ATONN_DSTPORT(STRSWITCH, 0, STRENG, 1, 0),
+                                                    LL_Switch_Init_Source(0) =
+                                                        ATONN_SRCPORT(STRSWITCH, 0, STRENG, 0, 0),
+                                                    LL_Switch_Init_Context(0) = 1, LL_Switch_Init_Frames(0) = 0};
     const LL_ATON_EnableUnits_InitTypeDef dma_units[] = {{{STRENG, 1}}, {{STRENG, 0}}};
     const uint32_t dma_wait_mask = 0x2;
 
     LL_Streng_TensorInit(0, &dma_in, 1);
     LL_Streng_TensorInit(1, &dma_out, 1);
-    LL_Switch_Init(&switch_init, 1);
+    LL_Switch_Init(&__ll_switch_init, 1);
     LL_ATON_EnableUnits_Init(dma_units, 2);
     LL_Streng_Wait(dma_wait_mask);
     LL_ATON_DisableUnits_Init(dma_units, 1);
-    LL_Switch_Deinit(&switch_init, 1);
+    LL_Switch_Deinit(&__ll_switch_init, 1);
   }
 
   return dst;
@@ -2638,7 +2701,7 @@ uintptr_t get_ec_aton_base(void)
 
 void initialize_ec_aton_base(void)
 {
-  ec_aton_base = malloc(ATON_SIZE);
+  ec_aton_base = malloc(ATON_ADDR_SPACE_SIZE);
 }
 
 /* Called by patched ATON.h to trace ATON register stores */
@@ -2672,11 +2735,11 @@ unsigned int ec_trace_get_REG_id(unsigned int regoffset)
 void ec_trace_wait_epoch_end(uint32_t wait_mask)
 {
   // TODO: Only polling mode supported at the moment
-  for (unsigned i = 0; i < 32; i++)
+  for (unsigned int i = 0; i < 32; i++)
   {
     if (wait_mask & (1 << i))
     {
-      LL_ATON_REG_POLL(STRENG, i, CTRL, RUNNING, 0);
+      ATON_REG_POLL(STRENG, i, CTRL, RUNNING, 0);
     }
   }
 }

@@ -55,6 +55,34 @@ extern "C"
 #define POSTPROCESS_ISEG_YOLO_V8_UI     (30) /* Yolov8 Seg postprocessing; Input model: uint8; output: int8        */
 #define POSTPROCESS_SSEG_DEEPLAB_V3_UF  (40) /* Deeplabv3 Seg postprocessing; Input model: uint8; output: float32  */
 
+/* Resolve the selected parameter type only after the selector values above
+ * exist. app_config.h owns the selected model; it must not include this file. */
+#include "app_config.h"
+
+#if POSTPROCESS_TYPE == POSTPROCESS_OD_YOLO_V2_UF
+typedef yolov2_pp_static_param_t app_postprocess_params_t;
+#elif POSTPROCESS_TYPE == POSTPROCESS_OD_YOLO_V5_UU
+typedef yolov5_pp_static_param_t app_postprocess_params_t;
+#elif POSTPROCESS_TYPE == POSTPROCESS_OD_YOLO_V8_UF || POSTPROCESS_TYPE == POSTPROCESS_OD_YOLO_V8_UI
+typedef yolov8_pp_static_param_t app_postprocess_params_t;
+#elif POSTPROCESS_TYPE == POSTPROCESS_OD_ST_YOLOX_UF
+typedef st_yolox_pp_static_param_t app_postprocess_params_t;
+#elif POSTPROCESS_TYPE == POSTPROCESS_OD_ST_SSD_UF
+typedef ssd_st_pp_static_param_t app_postprocess_params_t;
+#elif POSTPROCESS_TYPE == POSTPROCESS_MPE_YOLO_V8_UF
+typedef mpe_yolov8_pp_static_param_t app_postprocess_params_t;
+#elif POSTPROCESS_TYPE == POSTPROCESS_MPE_PD_UF
+typedef pd_model_pp_static_param_t app_postprocess_params_t;
+#elif POSTPROCESS_TYPE == POSTPROCESS_SPE_MOVENET_UF
+typedef spe_movenet_pp_static_param_t app_postprocess_params_t;
+#elif POSTPROCESS_TYPE == POSTPROCESS_ISEG_YOLO_V8_UI
+typedef yolov8_seg_pp_static_param_t app_postprocess_params_t;
+#elif POSTPROCESS_TYPE == POSTPROCESS_SSEG_DEEPLAB_V3_UF
+typedef sseg_deeplabv3_pp_static_param_t app_postprocess_params_t;
+#else
+#error "PostProcessing parameter type not supported"
+#endif
+
 /* Exported functions ------------------------------------------------------- */
 int32_t app_postprocess_init(void *params_postprocess);
 int32_t app_postprocess_run(void *pInput[], int nb_input, void *pOutput, void *pInput_param);

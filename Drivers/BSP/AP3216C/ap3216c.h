@@ -28,6 +28,8 @@
 
 /* 函数声明 */
 uint8_t ap3216c_init(void);                                         /* 初始化AP3216C */
+/* 0: complete sample, 1: failure; outputs stay unchanged on failure. */
+uint8_t ap3216c_read_checked(uint16_t *ir, uint16_t *ps, uint16_t *als);
 void ap3216c_read_data(uint16_t *ir, uint16_t *ps, uint16_t *als);  /* 读AP3216C数据 */
 
 #endif

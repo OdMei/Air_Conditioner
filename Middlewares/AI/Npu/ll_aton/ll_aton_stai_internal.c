@@ -20,12 +20,11 @@
 
 #include "stai_debug.h"
 
-#include "ll_aton_config.h"
+#include "ll_aton_caches_interface.h"
+#include "ll_aton_rt_user_api.h"
 #include "ll_aton_runtime.h"
 #include "ll_aton_stai_internal.h"
 #include "ll_aton_version.h"
-
-// #define _STAI_COMPILER_DESC                 "GCC compiler - " __DATE__ " " __TIME__
 
 /* -----------------------------------------------------------------------------
  * MACRO - ARM tool chain definition
@@ -143,7 +142,7 @@ static void _stai_aton_internal_rt_callback(LL_ATON_RT_Callbacktype_t ctype)
 
 STAI_INTERNAL_ENTRY
 void _stai_aton_internal_epoch_block_callback(LL_ATON_RT_Callbacktype_t ctype, const NN_Instance_TypeDef *nn_instance,
-                                              const EpochBlock_ItemTypeDef *epoch_block)
+                                              const LL_ATON_RT_EpochBlockItem_t *epoch_block)
 {
   STAI_ASSERT(nn_instance != NULL);
   _stai_aton_context *stai_nn_ctx =
@@ -246,15 +245,15 @@ stai_return_code stai_runtime_get_info(stai_runtime_info *info)
                         ((LL_ATON_OSAL & STAI_RT_OSAL_MASK) << STAI_RT_OSAL_BSHIFT) |
                         ((LL_ATON_RT_MODE & STAI_RT_MODE_MASK) << STAI_RT_MODE_BSHIFT) |
                         ((LL_ATON_DBG_BUFFER_INFO_EXCLUDED & STAI_RT_BINFO_MASK) << STAI_RT_BINFO_BSHIFT) |
-                        ((LL_ATON_ENABLE_CLOCK_GATING & STAI_RT_CLKG_MASK) << STAI_RT_CLKG_BSHIFT) |
+                        ((LL_ATON_ENABLE_CLOCK_GATING & STAI_RT_CLKG_MASK) << STAI_RT_CLKG_BSHIFT)
 #if LL_ATON_SW_FALLBACK == 1
-                        (1 << STAI_RT_SWF_BSHIFT) |
+                        | (1 << STAI_RT_SWF_BSHIFT)
 #endif // LL_ATON_SW_FALLBACK == 1
 #ifdef LL_ATON_DUMP_DEBUG_API
-                        (1 << STAI_RT_DD_BSHIFT) |
+                        | (1 << STAI_RT_DD_BSHIFT)
 #endif // LL_ATON_DUMP_DEBUG_API
 #ifdef LL_ATON_EB_DBG_INFO
-                        (1 << STAI_RT_EBDBG_BSHIFT)
+                        | (1 << STAI_RT_EBDBG_BSHIFT)
 #endif // LL_ATON_EB_DBG_INFO
                             ),
 
@@ -272,72 +271,31 @@ stai_return_code stai_runtime_get_info(stai_runtime_info *info)
 STAI_API_ENTRY
 stai_return_code stai_cache_mcu_clean_range(uintptr_t virtual_addr, stai_size size)
 {
-#if (LL_ATON_PLATFORM == LL_ATON_PLAT_STM32N6)
-  LL_ATON_LOCK_MCU_CACHE();
-  mcu_cache_clean_range((uintptr_t)((unsigned char *)(virtual_addr + 0)),
-                        (uintptr_t)((unsigned char *)(virtual_addr + size)));
-  LL_ATON_UNLOCK_MCU_CACHE();
+  LL_ATON_Cache_MCU_Clean_Range(virtual_addr, size);
   return STAI_SUCCESS;
-#else  // (LL_ATON_PLATFORM != LL_ATON_PLAT_STM32N6)
-  LL_ATON_LIB_UNUSED(virtual_addr);
-  LL_ATON_LIB_UNUSED(size);
-  return STAI_ERROR_NOT_IMPLEMENTED; // not yet implemented
-#endif // (LL_ATON_PLATFORM != LL_ATON_PLAT_STM32N6)
 }
 
 STAI_API_ENTRY
 stai_return_code stai_cache_mcu_invalidate_range(uintptr_t virtual_addr, stai_size size)
 {
-#if (LL_ATON_PLATFORM == LL_ATON_PLAT_STM32N6)
-  LL_ATON_LOCK_MCU_CACHE();
-  mcu_cache_invalidate_range((uintptr_t)((unsigned char *)(virtual_addr + 0)),
-                             (uintptr_t)((unsigned char *)(virtual_addr + size)));
-  LL_ATON_UNLOCK_MCU_CACHE();
+  LL_ATON_Cache_MCU_Invalidate_Range(virtual_addr, size);
   return STAI_SUCCESS;
-#else  // (LL_ATON_PLATFORM != LL_ATON_PLAT_STM32N6)
-  LL_ATON_LIB_UNUSED(virtual_addr);
-  LL_ATON_LIB_UNUSED(size);
-  return STAI_ERROR_NOT_IMPLEMENTED; // not yet implemented
-#endif // (LL_ATON_PLATFORM != LL_ATON_PLAT_STM32N6)
 }
 
 STAI_API_ENTRY
 stai_return_code stai_ext_cache_npu_clean_range(uintptr_t virtual_addr, stai_size size)
 {
-#if (LL_ATON_PLATFORM == LL_ATON_PLAT_STM32N6)
-#ifdef STAI_EXT_CACHE_HAS_NPU
-  LL_ATON_LOCK_NPU_CACHE();
-  npu_cache_clean_range(__LL_ATON_LIB_VIRTUAL_TO_PHYSICAL_ADDR((uintptr_t)((unsigned char *)(virtual_addr + 0))),
-                        __LL_ATON_LIB_VIRTUAL_TO_PHYSICAL_ADDR((uintptr_t)((unsigned char *)(virtual_addr + size))));
-  LL_ATON_UNLOCK_NPU_CACHE();
-#endif // STAI_EXT_CACHE_HAS_NPU
+  LL_ATON_Cache_NPU_Clean_Range(virtual_addr, size);
   return STAI_SUCCESS;
-#else  // (LL_ATON_PLATFORM != LL_ATON_PLAT_STM32N6)
-  LL_ATON_LIB_UNUSED(virtual_addr);
-  LL_ATON_LIB_UNUSED(size);
-  return STAI_ERROR_NOT_IMPLEMENTED; // not yet implemented
-#endif // (LL_ATON_PLATFORM != LL_ATON_PLAT_STM32N6)
 }
 
 STAI_API_ENTRY
 stai_return_code stai_ext_cache_npu_clean_invalidate_range(uintptr_t virtual_addr, stai_size size)
 {
-#if (LL_ATON_PLATFORM == LL_ATON_PLAT_STM32N6)
-#ifdef STAI_EXT_CACHE_HAS_NPU
   /* NOTE: The ATON NPU cache does not provide a pure invalidate-range function, but only a clean-invalidate range
      function! One has to take this into account when using `stai_ext_cache_npu_clean_invalidate_range`. */
-  LL_ATON_LOCK_NPU_CACHE();
-  npu_cache_clean_invalidate_range(
-      __LL_ATON_LIB_VIRTUAL_TO_PHYSICAL_ADDR((uintptr_t)((unsigned char *)(virtual_addr + 0))),
-      __LL_ATON_LIB_VIRTUAL_TO_PHYSICAL_ADDR((uintptr_t)((unsigned char *)(virtual_addr + size))));
-  LL_ATON_UNLOCK_NPU_CACHE();
-#endif // STAI_EXT_CACHE_HAS_NPU
+  LL_ATON_Cache_NPU_Clean_Invalidate_Range(virtual_addr, size);
   return STAI_SUCCESS;
-#else  // (LL_ATON_PLATFORM != LL_ATON_PLAT_STM32N6)
-  LL_ATON_LIB_UNUSED(virtual_addr);
-  LL_ATON_LIB_UNUSED(size);
-  return STAI_ERROR_NOT_IMPLEMENTED; // not yet implemented
-#endif // (LL_ATON_PLATFORM != LL_ATON_PLAT_STM32N6)
 }
 
 STAI_API_ENTRY
@@ -459,11 +417,11 @@ stai_return_code __ll_aton_stai_run(stai_network *network, const stai_run_mode m
   /* enable/disable tracing */
   if (nn_context->callback != NULL)
   {
-    LL_ATON_RT_SetEpochCallback(_stai_aton_internal_epoch_block_callback, &nn_context->network_instance);
+    LL_ATON_RT_SetNetworkCallback(&nn_context->network_instance, _stai_aton_internal_epoch_block_callback);
   }
   else
   {
-    LL_ATON_RT_SetEpochCallback(NULL, &nn_context->network_instance);
+    LL_ATON_RT_SetNetworkCallback(&nn_context->network_instance, NULL);
   }
 
   /* run/start network execution */
@@ -473,10 +431,12 @@ stai_return_code __ll_aton_stai_run(stai_network *network, const stai_run_mode m
     __ll_aton_stai_run_synchonously(&nn_context->network_instance); // run current network
 
     /* reset network for new inference */
-    assert(nn_context->exec_status == STAI_DONE);
-    stai_return_code ret = __ll_aton_stai_reset(network);
-    assert(ret == STAI_SUCCESS);
-    return ret;
+    {
+      LL_ATON_ASSERT(nn_context->exec_status == STAI_DONE);
+      stai_return_code ret = __ll_aton_stai_reset(network);
+      LL_ATON_ASSERT(ret == STAI_SUCCESS);
+      return ret;
+    }
     break;
   case STAI_MODE_ASYNC:
     __LL_ATON_START_CONT_EXEC(&nn_context->network_instance); // kick-off execution

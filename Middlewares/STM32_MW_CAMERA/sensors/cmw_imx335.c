@@ -69,16 +69,24 @@ static int32_t CMW_IMX335_getMirrorFlipConfig(uint32_t Config)
 static int32_t CMW_IMX335_DeInit(void *io_ctx)
 {
   int ret = CMW_ERROR_NONE;
-  ret = ISP_DeInit(&((CMW_IMX335_t *)io_ctx)->hIsp);
-  if (ret)
-  {
-    return CMW_ERROR_COMPONENT_FAILURE;
-  }
+  CMW_IMX335_t *imx335 = (CMW_IMX335_t *)io_ctx;
 
-  ret = IMX335_DeInit(&((CMW_IMX335_t *)io_ctx)->ctx_driver);
-  if (ret)
+  if (imx335 == NULL)
   {
-    return CMW_ERROR_COMPONENT_FAILURE;
+    return CMW_ERROR_WRONG_PARAM;
+  }
+  /* ISP_Init can fail before installing its algorithm list. ISP_DeInit
+     otherwise dereferences that null list after a failed sensor/start. */
+  if (imx335->hIsp.algorithm != NULL)
+  {
+    if (ISP_DeInit(&imx335->hIsp) != ISP_OK)
+    {
+      ret = CMW_ERROR_COMPONENT_FAILURE;
+    }
+  }
+  if (IMX335_DeInit(&imx335->ctx_driver) != IMX335_OK)
+  {
+    ret = CMW_ERROR_COMPONENT_FAILURE;
   }
   return ret;
 }
@@ -200,12 +208,17 @@ static int32_t CMW_IMX335_Start(void *io_ctx)
 static int32_t CMW_IMX335_Run(void *io_ctx)
 {
 #ifndef ISP_MW_TUNING_TOOL_SUPPORT
+  CMW_IMX335_t *imx335 = (CMW_IMX335_t *)io_ctx;
   int ret;
-  ret = ISP_BackgroundProcess(&((CMW_IMX335_t *)io_ctx)->hIsp);
+
+  ret = ISP_BackgroundProcess(&imx335->hIsp);
+  imx335->last_isp_background_status = ret;
   if (ret != ISP_OK)
   {
       return CMW_ERROR_PERIPH_FAILURE;
   }
+#else
+  (void)io_ctx;
 #endif
   return CMW_ERROR_NONE;
 }
@@ -225,6 +238,14 @@ static void CMW_IMX335_PowerOn(CMW_IMX335_t *io_ctx)
 static void CMW_IMX335_VsyncEventCallback(void *io_ctx, uint32_t pipe)
 {
 #ifndef ISP_MW_TUNING_TOOL_SUPPORT
+  CMW_IMX335_t *imx335 = (CMW_IMX335_t *)io_ctx;
+  /* A failed probe/start can leave CSI interrupts pending before a valid
+     ISP exists. No statistics may run against that partial handle. */
+  if ((imx335 == NULL) || (imx335->hIsp.hDcmipp == NULL) ||
+      (imx335->hIsp.algorithm == NULL))
+  {
+    return;
+  }
   /* Update the ISP frame counter and call its statistics handler */
   switch (pipe)
   {

@@ -1,0 +1,22 @@
+[
+  {
+    "path": "D:\\Learning\\AC-N647\\Air_Conditioner\\Air_Conditioner\\Project\\Project\\Air_Conditioner\\Model\\candidates\\yolov8n_256_quant_pc_uf_od_coco-person.tflite",
+    "source": "https://raw.githubusercontent.com/stm32-hotspot/ultralytics/9e84522dbdfadcc0074c2c86c44aff6dea177534/examples/YOLOv8-STEdgeAI/stedgeai_models/object_detection/yolov8n_256_quant_pc_uf_od_coco-person.tflite",
+    "repository": "stm32-hotspot/ultralytics",
+    "commit": "9e84522dbdfadcc0074c2c86c44aff6dea177534",
+    "bytes": 3104056,
+    "sha256": "20136a73b90d5c244abf3ca2c70b7b079c27a720a372dea24f31e746aa929424",
+    "source_documentation": "https://github.com/STMicroelectronics/stm32ai-modelzoo/blob/main/object_detection/yolov8n/README.md",
+    "license_notice": "https://github.com/stm32-hotspot/ultralytics/blob/main/examples/YOLOv8-STEdgeAI/README.md"
+  },
+  {
+    "path": "D:\\Learning\\AC-N647\\Air_Conditioner\\Air_Conditioner\\Project\\Project\\Air_Conditioner\\Model\\candidates\\yolov8n_320_quant_pc_uf_od_coco-person.tflite",
+    "source": "https://raw.githubusercontent.com/stm32-hotspot/ultralytics/9e84522dbdfadcc0074c2c86c44aff6dea177534/examples/YOLOv8-STEdgeAI/stedgeai_models/object_detection/yolov8n_320_quant_pc_uf_od_coco-person.tflite",
+    "repository": "stm32-hotspot/ultralytics",
+    "commit": "9e84522dbdfadcc0074c2c86c44aff6dea177534",
+    "bytes": 3107936,
+    "sha256": "14214fde0af656e24fa784de28337c1ccf459e63c1d19bca2bf9cc47abd63537",
+    "source_documentation": "https://github.com/STMicroelectronics/stm32ai-modelzoo/blob/main/object_detection/yolov8n/README.md",
+    "license_notice": "https://github.com/stm32-hotspot/ultralytics/blob/main/examples/YOLOv8-STEdgeAI/README.md"
+  }
+]

@@ -1,0 +1,33 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 21,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "lvgl-preview",
+      "displayName": "N647 LVGL PC preview",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build",
+      "environment": {
+        "PATH": "C:/msys64/mingw64/bin;$penv{PATH}"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILER": "C:/msys64/mingw64/bin/gcc.exe",
+        "CMAKE_CXX_COMPILER": "C:/msys64/mingw64/bin/g++.exe",
+        "CMAKE_MAKE_PROGRAM": "C:/msys64/mingw64/bin/ninja.exe",
+        "SDL2_ROOT": "C:/msys64/mingw64"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "lvgl-preview",
+      "configurePreset": "lvgl-preview",
+      "targets": ["lvgl_preview"]
+    }
+  ]
+}

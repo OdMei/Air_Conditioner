@@ -46,7 +46,7 @@
 
 #define GT9XXX_INT        HAL_GPIO_ReadPin(GT9XXX_INT_GPIO_PORT, GT9XXX_INT_GPIO_PIN)     /* 读取做的引脚 */
 
-/* IIC读写命令 */
+/* I2C constants already use (7-bit address << 1); HAL supplies the R/W bit. */
 #define GT9XXX_CMD_WR       0X28        /* 写命令 */
 #define GT9XXX_CMD_RD       0X29        /* 读命令 */
 
@@ -73,7 +73,7 @@
 /* 函数声明 */
 
 uint8_t gt9xxx_wr_reg(uint16_t reg,uint8_t *buf,uint8_t len);   /* 向gt9xx写入数据 */
-void gt9xxx_rd_reg(uint16_t reg,uint8_t *buf,uint8_t len);      /* 从gt9xx读取数据 */
+uint8_t gt9xxx_rd_reg(uint16_t reg,uint8_t *buf,uint8_t len);   /* 从gt9xx读取数据 */
 uint8_t gt9xxx_init(void);                                      /* 初始化gt9xxx触摸屏 */
 uint8_t gt9xxx_scan(uint8_t mode);                              /* 扫描触摸屏 */
 

@@ -1,0 +1,53 @@
+{
+  "name": "YOLOv8n person INT8 256",
+  "network_interface": "network",
+  "generator_version": "ST Edge AI Core v4.0.1-20581 7ed50de05\n   STM32CubeAI 12.0.1-RC2",
+  "runtime_version": "atonn-v1.1.3-275-g6770925d",
+  "model_source": {
+    "path": "D:\\Learning\\AC-N647\\Air_Conditioner\\Air_Conditioner\\Project\\Project\\Air_Conditioner\\Model\\candidates\\yolov8n_256_quant_pc_uf_od_coco-person.tflite",
+    "source": "https://raw.githubusercontent.com/stm32-hotspot/ultralytics/9e84522dbdfadcc0074c2c86c44aff6dea177534/examples/YOLOv8-STEdgeAI/stedgeai_models/object_detection/yolov8n_256_quant_pc_uf_od_coco-person.tflite",
+    "repository": "stm32-hotspot/ultralytics",
+    "commit": "9e84522dbdfadcc0074c2c86c44aff6dea177534",
+    "bytes": 3104056,
+    "sha256": "20136a73b90d5c244abf3ca2c70b7b079c27a720a372dea24f31e746aa929424",
+    "source_documentation": "https://github.com/STMicroelectronics/stm32ai-modelzoo/blob/main/object_detection/yolov8n/README.md",
+    "license_notice": "https://github.com/stm32-hotspot/ultralytics/blob/main/examples/YOLOv8-STEdgeAI/README.md"
+  },
+  "input": {
+    "shape": [
+      1,
+      256,
+      256,
+      3
+    ],
+    "dtype": "uint8",
+    "bytes": 196608,
+    "quant_scale": 0.00392156862745098,
+    "zero_point": 0
+  },
+  "output": {
+    "shape": [
+      1,
+      5,
+      1344
+    ],
+    "dtype": "float32",
+    "bytes": 26880,
+    "coordinates": "normalized_centroid"
+  },
+  "weights": {
+    "address": "0x70200000",
+    "bytes": 3011681,
+    "crc32": "0x4D999695",
+    "end_exclusive": "0x704df461",
+    "bin_sha256": "b6e81e4337aae81d38243f5423d9c0d81bf9f9bf616432153385a0cefad9aa96",
+    "hex_sha256": "3c0b83eab08fd7f0ad5ae1a5e94447fdf474ba8a5abddb5fff278958eff0217a"
+  },
+  "generated_files": {
+    "network.c": "889588fe04452b760ac94eabd0c12d716ae30d25cd6c42a9bac33b8f4bcef2a4",
+    "network.h": "e690a604b6323a838d37b3f6a39d7e5de00607505a62d68623c5390c94ba448b",
+    "network_ecblobs.h": "bbd38be4829abde5070496bb21cfc5b055d7f0c96a546db033c563481643e827"
+  },
+  "paired_programming_required": true,
+  "hardware_runtime_verified": false
+}

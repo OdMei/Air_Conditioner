@@ -74,7 +74,7 @@ void bsp_lcd_config_layer(uint32_t layer_index, bsp_lcd_layer_config_t *layer_co
         .WindowY0 = layer_config->y0,
         .WindowY1 = layer_config->y1,
         .PixelFormat = 0,
-        .Alpha = LTDC_LxCACR_CONSTA,
+        .Alpha = 0xFFU,
         .Alpha0 = 0,
         .BlendingFactor1 = LTDC_BLENDING_FACTOR1_PAxCA,
         .BlendingFactor2 = LTDC_BLENDING_FACTOR2_PAxCA,

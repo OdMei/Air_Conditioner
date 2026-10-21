@@ -300,6 +300,10 @@ static const struct regval test_pattern_disable_regs[] = {
 
 #define IMX335_1H_PERIOD_USEC (1000000.0F / 4500 / 30)
 
+static void IMX335_RecordExposureFailure(
+    IMX335_Object_t *pObj,
+    IMX335_ExposureStage_t stage);
+
 /**
   * @}
   */
@@ -630,49 +634,110 @@ return ret;
   */
 int32_t IMX335_SetExposure(IMX335_Object_t *pObj, int32_t exposure)
 {
-  int32_t ret = IMX335_OK;
   uint32_t vmax, shutter;
   uint8_t hold;
 
-
-  if (imx335_read_reg(&pObj->Ctx, IMX335_REG_VMAX, (uint8_t *)&vmax, 4) != IMX335_OK)
+  if (pObj == NULL)
   {
-    ret = IMX335_ERROR;
-  }
-  else
-  {
-    shutter = (uint32_t) (vmax - (exposure / IMX335_1H_PERIOD_USEC));
-
-    if (shutter < IMX335_SHUTTER_MIN)
-    {
-      ret = IMX335_ERROR;
-    }
-    else
-    {
-      hold = 1;
-      if(imx335_write_reg(&pObj->Ctx, IMX335_REG_HOLD, &hold, 1) != IMX335_OK)
-      {
-        ret = IMX335_ERROR;
-      }
-      else
-      {
-        if(imx335_write_reg(&pObj->Ctx, IMX335_REG_SHUTTER, (uint8_t *)&shutter, 3) != IMX335_OK)
-        {
-          ret = IMX335_ERROR;
-        }
-        else
-        {
-          hold = 0;
-          if(imx335_write_reg(&pObj->Ctx, IMX335_REG_HOLD, &hold, 1) != IMX335_OK)
-          {
-            ret = IMX335_ERROR;
-          }
-        }
-      }
-    }
+    return IMX335_ERROR;
   }
 
-  return ret;
+  pObj->exposure_diagnostics.requested_exposure_us = exposure;
+  pObj->exposure_diagnostics.vmax_lines = 0U;
+  pObj->exposure_diagnostics.shutter_lines = 0U;
+  pObj->exposure_diagnostics.failure_stage =
+      IMX335_EXPOSURE_STAGE_READ_VMAX;
+  pObj->exposure_diagnostics.driver_status = IMX335_OK;
+
+  if (imx335_read_reg(&pObj->Ctx, IMX335_REG_VMAX,
+                      (uint8_t *)&vmax, 4U) != IMX335_OK)
+  {
+    IMX335_RecordExposureFailure(
+        pObj, IMX335_EXPOSURE_STAGE_READ_VMAX);
+    return IMX335_ERROR;
+  }
+
+  pObj->exposure_diagnostics.vmax_lines = vmax;
+  shutter = (uint32_t)(vmax -
+                       (exposure / IMX335_1H_PERIOD_USEC));
+  pObj->exposure_diagnostics.shutter_lines = shutter;
+
+  if (shutter < IMX335_SHUTTER_MIN)
+  {
+    IMX335_RecordExposureFailure(
+        pObj, IMX335_EXPOSURE_STAGE_CALCULATE_SHUTTER);
+    return IMX335_ERROR;
+  }
+
+  pObj->exposure_diagnostics.failure_stage =
+      IMX335_EXPOSURE_STAGE_ASSERT_HOLD;
+  hold = 1U;
+  if (imx335_write_reg(&pObj->Ctx, IMX335_REG_HOLD, &hold, 1U) !=
+      IMX335_OK)
+  {
+    IMX335_RecordExposureFailure(
+        pObj, IMX335_EXPOSURE_STAGE_ASSERT_HOLD);
+    return IMX335_ERROR;
+  }
+
+  pObj->exposure_diagnostics.failure_stage =
+      IMX335_EXPOSURE_STAGE_WRITE_SHUTTER;
+  if (imx335_write_reg(&pObj->Ctx, IMX335_REG_SHUTTER,
+                       (uint8_t *)&shutter, 3U) != IMX335_OK)
+  {
+    IMX335_RecordExposureFailure(
+        pObj, IMX335_EXPOSURE_STAGE_WRITE_SHUTTER);
+    return IMX335_ERROR;
+  }
+
+  pObj->exposure_diagnostics.failure_stage =
+      IMX335_EXPOSURE_STAGE_RELEASE_HOLD;
+  hold = 0U;
+  if (imx335_write_reg(&pObj->Ctx, IMX335_REG_HOLD, &hold, 1U) !=
+      IMX335_OK)
+  {
+    IMX335_RecordExposureFailure(
+        pObj, IMX335_EXPOSURE_STAGE_RELEASE_HOLD);
+    return IMX335_ERROR;
+  }
+
+  pObj->exposure_diagnostics.failure_stage =
+      IMX335_EXPOSURE_STAGE_NONE;
+  pObj->exposure_diagnostics.driver_status = IMX335_OK;
+  return IMX335_OK;
+}
+
+static void IMX335_RecordExposureFailure(
+    IMX335_Object_t *pObj,
+    IMX335_ExposureStage_t stage)
+{
+  pObj->exposure_diagnostics.failure_stage = (int32_t)stage;
+  pObj->exposure_diagnostics.driver_status = IMX335_ERROR;
+}
+
+/**
+  * @brief  Read the latest exposure programming diagnostics.
+  * @param  pObj Component object.
+  * @param  diagnostics Output diagnostics structure.
+  * @retval IMX335_OK on success, otherwise IMX335_ERROR.
+  */
+int32_t IMX335_GetExposureDiagnostics(
+    const IMX335_Object_t *pObj,
+    IMX335_ExposureDiagnostics_t *diagnostics)
+{
+  if ((pObj == NULL) || (diagnostics == NULL))
+  {
+    return IMX335_ERROR;
+  }
+
+  diagnostics->requested_exposure_us =
+      pObj->exposure_diagnostics.requested_exposure_us;
+  diagnostics->vmax_lines = pObj->exposure_diagnostics.vmax_lines;
+  diagnostics->shutter_lines = pObj->exposure_diagnostics.shutter_lines;
+  diagnostics->failure_stage = pObj->exposure_diagnostics.failure_stage;
+  diagnostics->driver_status = pObj->exposure_diagnostics.driver_status;
+
+  return IMX335_OK;
 }
 
 /**

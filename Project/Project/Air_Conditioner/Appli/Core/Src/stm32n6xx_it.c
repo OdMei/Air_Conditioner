@@ -23,6 +23,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "cmw_camera.h"
+#include "remote.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -56,6 +57,7 @@
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
+extern TIM_HandleTypeDef htim1;
 
 /* USER CODE BEGIN EV */
 
@@ -205,6 +207,16 @@ void DCMIPP_IRQHandler(void)
 void CSI_IRQHandler(void)
 {
   HAL_DCMIPP_CSI_IRQHandler(CMW_CAMERA_GetDCMIPPHandle());
+}
+
+void TIM1_UP_IRQHandler(void)
+{
+  HAL_TIM_IRQHandler(&htim1);
+}
+
+void TIM1_CC_IRQHandler(void)
+{
+  HAL_TIM_IRQHandler(&htim1);
 }
 
 /* USER CODE END 1 */

@@ -397,47 +397,37 @@ __weak HAL_StatusTypeDef MX_DCMIPP_ClockConfig(DCMIPP_HandleTypeDef *hdcmipp)
 int32_t CMW_CAMERA_DeInit(void)
 {
   int32_t ret = CMW_ERROR_NONE;
+  int32_t component_ret;
 
-
-  ret = HAL_DCMIPP_CSI_PIPE_Stop(&hcamera_dcmipp, DCMIPP_PIPE1, DCMIPP_VIRTUAL_CHANNEL0);
-  if (ret != HAL_OK)
+  /* All users (capture callbacks, NN, postprocess, ISP) must be quiesced
+     before this whole-pipeline reset. Reset also works after a partial
+     probe/start failure and guarantees that camera DMA releases its RAM.
+     HAL's MSP resets DCMIPP/CSI only; shared I2C2 remains attached. */
+  if ((hcamera_dcmipp.Instance != NULL) &&
+      (HAL_DCMIPP_DeInit(&hcamera_dcmipp) != HAL_OK))
   {
     return CMW_ERROR_PERIPH_FAILURE;
   }
 
-  ret = HAL_DCMIPP_CSI_PIPE_Stop(&hcamera_dcmipp, DCMIPP_PIPE2, DCMIPP_VIRTUAL_CHANNEL0);
-  if (ret != HAL_OK)
+  if (Camera_Drv.DeInit != NULL)
   {
-    return CMW_ERROR_PERIPH_FAILURE;
+    component_ret = Camera_Drv.DeInit(&camera_bsp);
+    if (component_ret != CMW_ERROR_NONE)
+    {
+      ret = CMW_ERROR_COMPONENT_FAILURE;
+    }
   }
-
-  ret = HAL_DCMIPP_DeInit(&hcamera_dcmipp);
-  if (ret != HAL_OK)
-  {
-    return CMW_ERROR_PERIPH_FAILURE;
-  }
-
-  if (is_camera_init <= 0)
-  {
-    return CMW_ERROR_NONE;
-  }
-
-  /* De-initialize the camera module */
-  ret = Camera_Drv.DeInit(&camera_bsp);
-  if (ret != CMW_ERROR_NONE)
-  {
-    return CMW_ERROR_COMPONENT_FAILURE;
-  }
-  /* Set Camera in Power Down */
   CMW_CAMERA_PwrDown();
 
-  /* Update DCMIPPInit counter */
-  is_camera_init--;
-  is_camera_started--;
-  is_pipe1_2_shared--;
+  /* A configured sensor need not have been started. Decrementing these
+     counters made start/shared flags negative and broke the next start. */
+  is_camera_init = 0;
+  is_camera_started = 0;
+  is_pipe1_2_shared = 0;
+  memset(&Camera_Drv, 0, sizeof(Camera_Drv));
+  memset(&camera_bsp, 0, sizeof(camera_bsp));
+  memset(&camera_conf, 0, sizeof(camera_conf));
 
-  /* Return CMW status */
-  ret = CMW_ERROR_NONE;
   return ret;
 }
 
@@ -653,6 +643,72 @@ int32_t CMW_CAMERA_Run()
       return Camera_Drv.Run(&camera_bsp);
   }
   return CMW_ERROR_NONE;
+}
+
+int32_t CMW_CAMERA_GetLastISPBackgroundStatus(int32_t *status)
+{
+  if (status == NULL)
+  {
+    return CMW_ERROR_WRONG_PARAM;
+  }
+
+  if (is_camera_init == 0)
+  {
+    return CMW_ERROR_NO_INIT;
+  }
+
+#if defined(USE_IMX335_SENSOR)
+  if (detected_sensor != CMW_IMX335_Sensor)
+  {
+    return CMW_ERROR_FEATURE_NOT_SUPPORTED;
+  }
+
+  *status = camera_bsp.imx335_bsp.last_isp_background_status;
+  return CMW_ERROR_NONE;
+#else
+  return CMW_ERROR_FEATURE_NOT_SUPPORTED;
+#endif
+}
+
+int32_t CMW_CAMERA_GetExposureDiagnostics(
+    CMW_CAMERA_ExposureDiagnostics_t *diagnostics)
+{
+  if (diagnostics == NULL)
+  {
+    return CMW_ERROR_WRONG_PARAM;
+  }
+
+  if (is_camera_init == 0)
+  {
+    return CMW_ERROR_NO_INIT;
+  }
+
+#if defined(USE_IMX335_SENSOR)
+  IMX335_ExposureDiagnostics_t sensor_diagnostics;
+  int32_t status;
+
+  if (detected_sensor != CMW_IMX335_Sensor)
+  {
+    return CMW_ERROR_FEATURE_NOT_SUPPORTED;
+  }
+
+  status = IMX335_GetExposureDiagnostics(
+      &camera_bsp.imx335_bsp.ctx_driver, &sensor_diagnostics);
+  if (status != IMX335_OK)
+  {
+    return CMW_ERROR_COMPONENT_FAILURE;
+  }
+
+  diagnostics->requested_exposure_us =
+      sensor_diagnostics.requested_exposure_us;
+  diagnostics->vmax_lines = sensor_diagnostics.vmax_lines;
+  diagnostics->shutter_lines = sensor_diagnostics.shutter_lines;
+  diagnostics->failure_stage = sensor_diagnostics.failure_stage;
+  diagnostics->driver_status = sensor_diagnostics.driver_status;
+  return CMW_ERROR_NONE;
+#else
+  return CMW_ERROR_FEATURE_NOT_SUPPORTED;
+#endif
 }
 
 /**

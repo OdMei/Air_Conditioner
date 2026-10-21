@@ -20,6 +20,7 @@
 #include "app_postprocess.h"
 #include "app_config.h"
 #include <assert.h>
+#include <math.h>
 
 #if POSTPROCESS_TYPE == POSTPROCESS_OD_YOLO_V5_UU
 static od_pp_outBuffer_t out_detections[AI_OBJDETECT_YOLOV5_PP_TOTAL_BOXES];
@@ -48,8 +49,61 @@ int8_t _out_buf_mask_s8[AI_YOLOV8_SEG_PP_MASK_NB * AI_YOLOV8_SEG_PP_TOTAL_BOXES]
 static uint8_t out_sseg_map[AI_SSEG_DEEPLABV3_PP_WIDTH * AI_SSEG_DEEPLABV3_PP_HEIGHT];
 #endif
 
+#if POSTPROCESS_TYPE == POSTPROCESS_OD_YOLO_V8_UF || POSTPROCESS_TYPE == POSTPROCESS_OD_YOLO_V8_UI
+/* The vendor decoder writes every passing candidate before NMS, so its
+ * scratch capacity is TOTAL_BOXES, rather than the public result limit. */
+_Static_assert(AI_OBJDETECT_YOLOV8_PP_NB_CLASSES > 0, "YOLOv8 needs at least one class");
+_Static_assert(AI_OBJDETECT_YOLOV8_PP_TOTAL_BOXES > 0, "YOLOv8 scratch capacity cannot be zero");
+_Static_assert(AI_OBJDETECT_YOLOV8_PP_MAX_BOXES_LIMIT > 0 &&
+               AI_OBJDETECT_YOLOV8_PP_MAX_BOXES_LIMIT <= AI_OBJDETECT_YOLOV8_PP_TOTAL_BOXES,
+               "YOLOv8 public result limit exceeds scratch capacity");
+
+static int app_yolov8_params_valid(const yolov8_pp_static_param_t *params)
+{
+  return params != NULL &&
+         params->nb_classes == AI_OBJDETECT_YOLOV8_PP_NB_CLASSES &&
+         params->nb_total_boxes == AI_OBJDETECT_YOLOV8_PP_TOTAL_BOXES &&
+         params->max_boxes_limit > 0 &&
+         params->max_boxes_limit <= AI_OBJDETECT_YOLOV8_PP_MAX_BOXES_LIMIT &&
+         isfinite(params->conf_threshold) && params->conf_threshold > 0.0f &&
+         params->conf_threshold <= 1.0f && isfinite(params->iou_threshold) &&
+         params->iou_threshold >= 0.0f && params->iou_threshold <= 1.0f;
+}
+#endif
+
+#if POSTPROCESS_TYPE == POSTPROCESS_OD_YOLO_V8_UF
+/* Reject malformed tensor data before qsort/NMS can see NaNs or invalid
+ * areas. Coordinates may extend outside the image: clipping belongs to the
+ * display mapper, while probabilities must already be sigmoid output. */
+static int app_yolov8_float_input_valid(const float32_t *raw,
+                                       const yolov8_pp_static_param_t *params)
+{
+  const int32_t boxes = params->nb_total_boxes;
+  for (int32_t index = 0; index < boxes; ++index)
+  {
+    float32_t best = 0.0f;
+    for (int32_t class_index = 0; class_index < params->nb_classes; ++class_index)
+    {
+      const float32_t probability = raw[(4 + class_index) * boxes + index];
+      if (!isfinite(probability) || probability < 0.0f || probability > 1.0f)
+        return 0;
+      if (probability > best) best = probability;
+    }
+    if (best >= params->conf_threshold)
+    {
+      if (!isfinite(raw[index]) || !isfinite(raw[boxes + index]) ||
+          !isfinite(raw[2 * boxes + index]) || !isfinite(raw[3 * boxes + index]) ||
+          raw[2 * boxes + index] <= 0.0f || raw[3 * boxes + index] <= 0.0f)
+        return 0;
+    }
+  }
+  return 1;
+}
+#endif
+
 int32_t app_postprocess_init(void *params_postprocess)
 {
+  if (params_postprocess == NULL) return AI_OD_POSTPROCESS_ERROR;
 #if POSTPROCESS_TYPE == POSTPROCESS_OD_YOLO_V2_UF
   int32_t error = AI_OD_POSTPROCESS_ERROR_NO;
   yolov2_pp_static_param_t *params = (yolov2_pp_static_param_t *) params_postprocess;
@@ -89,6 +143,7 @@ int32_t app_postprocess_init(void *params_postprocess)
   params->raw_output_scale = 0;
   params->raw_output_zero_point = 0;
 #endif
+  if (!app_yolov8_params_valid(params)) return AI_OD_POSTPROCESS_ERROR;
   error = od_yolov8_pp_reset(params);
 #elif POSTPROCESS_TYPE == POSTPROCESS_OD_ST_YOLOX_UF
   int32_t error = AI_OD_POSTPROCESS_ERROR_NO;
@@ -192,6 +247,24 @@ int32_t app_postprocess_init(void *params_postprocess)
 
 int32_t app_postprocess_run(void *pInput[], int nb_input, void *pOutput, void *pInput_param)
 {
+#if POSTPROCESS_TYPE == POSTPROCESS_OD_YOLO_V8_UF || POSTPROCESS_TYPE == POSTPROCESS_OD_YOLO_V8_UI
+  od_pp_out_t *checked_output = (od_pp_out_t *) pOutput;
+  if (checked_output == NULL) return AI_OD_POSTPROCESS_ERROR;
+  checked_output->nb_detect = 0;
+  checked_output->pOutBuff = out_detections;
+  if (nb_input != 1 || pInput == NULL || pInput[0] == NULL ||
+      !app_yolov8_params_valid((yolov8_pp_static_param_t *)pInput_param))
+    return AI_OD_POSTPROCESS_ERROR;
+#if POSTPROCESS_TYPE == POSTPROCESS_OD_YOLO_V8_UF
+  if (!app_yolov8_float_input_valid((float32_t *)pInput[0],
+                                   (yolov8_pp_static_param_t *)pInput_param))
+    return AI_OD_POSTPROCESS_ERROR;
+#else
+  const yolov8_pp_static_param_t *checked_params = (yolov8_pp_static_param_t *)pInput_param;
+  if (!isfinite(checked_params->raw_output_scale) || checked_params->raw_output_scale <= 0.0f)
+    return AI_OD_POSTPROCESS_ERROR;
+#endif
+#endif
 #if POSTPROCESS_TYPE == POSTPROCESS_OD_YOLO_V2_UF
   assert(nb_input == 1);
   int32_t error = AI_OD_POSTPROCESS_ERROR_NO;

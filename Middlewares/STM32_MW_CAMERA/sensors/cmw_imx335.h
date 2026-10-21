@@ -34,6 +34,7 @@ typedef struct
   uint32_t ClockInHz;
   IMX335_Object_t ctx_driver;
   ISP_HandleTypeDef hIsp;
+  int32_t last_isp_background_status;
   ISP_AppliHelpersTypeDef appliHelpers;
   DCMIPP_HandleTypeDef *hdcmipp;
   uint8_t IsInitialized;

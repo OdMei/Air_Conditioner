@@ -75,6 +75,8 @@ void MX_XSPIM_Init(void);
 void MX_DMA2D_Init(void);
 void MX_LTDC_Init(void);
 void MX_I2C2_Init(void);
+void MX_I2C4_Init(void);
+void MX_TIM1_Init(void);
 
 /* USER CODE BEGIN EFP */
 

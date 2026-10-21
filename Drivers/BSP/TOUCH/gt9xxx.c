@@ -19,12 +19,9 @@
  */
 
 #include "string.h"
-#include "../RGBLCD/rgblcd.h"
 #include "touch.h"
-#include "ctiic.h"
 #include "gt9xxx.h"
-#include "../SYS/sys.h"
-
+#include "ctiic.h"
 
 /* 注意: 除了GT9271支持10点触摸之外, 其他触摸芯片只支持 5点触摸 */
 uint8_t g_gt_tnum = 5;      /* 默认支持的触摸屏点数(5点触摸) */
@@ -38,26 +35,7 @@ uint8_t g_gt_tnum = 5;      /* 默认支持的触摸屏点数(5点触摸) */
  */
 uint8_t gt9xxx_wr_reg(uint16_t reg, uint8_t *buf, uint8_t len)
 {
-    uint8_t i;
-    uint8_t ret = 0;
-    ct_iic_start();
-    ct_iic_send_byte(GT9XXX_CMD_WR);    /* 发送写命令 */
-    ct_iic_wait_ack();
-    ct_iic_send_byte(reg >> 8);         /* 发送高8位地址 */
-    ct_iic_wait_ack();
-    ct_iic_send_byte(reg & 0XFF);       /* 发送低8位地址 */
-    ct_iic_wait_ack();
-
-    for (i = 0; i < len; i++)
-    {
-        ct_iic_send_byte(buf[i]);       /* 发数据 */
-        ret = ct_iic_wait_ack();
-
-        if (ret)break;
-    }
-
-    ct_iic_stop();  /* 产生一个停止条件 */
-    return ret;
+    return ct_iic_write_reg(GT9XXX_CMD_WR, reg, CT_IIC_REG16, buf, len);
 }
 
 /**
@@ -65,28 +43,11 @@ uint8_t gt9xxx_wr_reg(uint16_t reg, uint8_t *buf, uint8_t len)
  * @param       reg : 起始寄存器地址
  * @param       buf : 数据缓缓存区
  * @param       len : 读数据长度
- * @retval      无
+ * @retval      0, 成功; 1, 失败;
  */
-void gt9xxx_rd_reg(uint16_t reg, uint8_t *buf, uint8_t len)
+uint8_t gt9xxx_rd_reg(uint16_t reg, uint8_t *buf, uint8_t len)
 {
-    uint8_t i;
-    ct_iic_start();
-    ct_iic_send_byte(GT9XXX_CMD_WR);    /* 发送写命令 */
-    ct_iic_wait_ack();
-    ct_iic_send_byte(reg >> 8);         /* 发送高8位地址 */
-    ct_iic_wait_ack();
-    ct_iic_send_byte(reg & 0XFF);       /* 发送低8位地址 */
-    ct_iic_wait_ack();
-    ct_iic_start();
-    ct_iic_send_byte(GT9XXX_CMD_RD);    /* 发送读命令 */
-    ct_iic_wait_ack();
-
-    for (i = 0; i < len; i++)
-    {
-        buf[i] = ct_iic_read_byte(i == (len - 1) ? 0 : 1);  /* 读取数据 */
-    }
-
-    ct_iic_stop();  /* 产生一个停止条件 */
+    return ct_iic_read_reg(GT9XXX_CMD_WR, reg, CT_IIC_REG16, buf, len);
 }
 
 /**
@@ -96,8 +57,8 @@ void gt9xxx_rd_reg(uint16_t reg, uint8_t *buf, uint8_t len)
  */
 uint8_t gt9xxx_init(void)
 {
-    GPIO_InitTypeDef gpio_init_struct;
-    uint8_t temp[5];
+    GPIO_InitTypeDef gpio_init_struct = {0};
+    uint8_t temp[5] = {0};
 
     GT9XXX_RST_GPIO_CLK_ENABLE();   /* RST引脚时钟使能 */
     GT9XXX_INT_GPIO_CLK_ENABLE();   /* INT引脚时钟使能 */
@@ -114,7 +75,7 @@ uint8_t gt9xxx_init(void)
     gpio_init_struct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;     /* 高速 */
     HAL_GPIO_Init(GT9XXX_INT_GPIO_PORT, &gpio_init_struct); /* 初始化INT引脚 */
 
-    ct_iic_init();      /* 初始化电容屏的I2C总线 */
+    if (ct_iic_init() != 0U) { return 1U; }
     GT9XXX_RST(0);      /* 复位 */
     HAL_Delay(10);
     GT9XXX_RST(1);      /* 释放复位 */
@@ -128,7 +89,10 @@ uint8_t gt9xxx_init(void)
     HAL_GPIO_Init(GT9XXX_INT_GPIO_PORT, &gpio_init_struct); /* 初始化INT引脚 */
 
     HAL_Delay(100);
-    gt9xxx_rd_reg(GT9XXX_PID_REG, temp, 4); /* 读取触摸IC的ID */
+    if (gt9xxx_rd_reg(GT9XXX_PID_REG, temp, 4) != 0U)
+    {
+        return 1U;
+    }
     temp[4] = 0;
 
     /* 判断一下是否是特定的触摸屏 */
@@ -137,18 +101,21 @@ uint8_t gt9xxx_init(void)
         return 1;   /* 若不是触摸屏用到的GT911/9147/1158/9271，则初始化失败，需硬件查看触摸IC型号以及查看时序函数是否正确 */
     }
     
-    if (strcmp((char *)temp, "9271") == 0)      /* ID==9271, 支持10点触摸 */
-    {
-         g_gt_tnum = 10;                        /* 支持10点触摸屏 */
-    }
+    g_gt_tnum = (strcmp((char *)temp, "9271") == 0) ? 10U : 5U;
     
     temp[0] = 0X02;
-    gt9xxx_wr_reg(GT9XXX_CTRL_REG, temp, 1);    /* 软复位GT9XXX */
+    if (gt9xxx_wr_reg(GT9XXX_CTRL_REG, temp, 1) != 0U)
+    {
+        return 1U;
+    }
     
     HAL_Delay(10);
     
     temp[0] = 0X00;
-    gt9xxx_wr_reg(GT9XXX_CTRL_REG, temp, 1);    /* 结束复位, 进入读坐标状态 */
+    if (gt9xxx_wr_reg(GT9XXX_CTRL_REG, temp, 1) != 0U)
+    {
+        return 1U;
+    }
 
     return 0;
 }
@@ -169,111 +136,93 @@ const uint16_t GT9XXX_TPX_TBL[10] =
  */
 uint8_t gt9xxx_scan(uint8_t mode)
 {
-    uint8_t buf[4];
-    uint8_t i = 0;
-    uint8_t res = 0;
-    uint16_t temp;
-    uint16_t tempsta;
-    static uint8_t t = 0;   /* 控制查询间隔,从而降低CPU占用率 */
+    uint8_t points[76] = {0};
+    uint8_t clear = 0U;
+    uint8_t count;
+    uint8_t i;
+    uint8_t first_valid = 0xFFU;
+    static uint8_t t;
+
+    (void)mode;
     t++;
+    if (t > 240U) { t = 10U; }
+    if ((t % 10U != 0U) && (t >= 10U)) { return 0U; }
 
-    if ((t % 10) == 0 || t < 10)    /* 空闲时,每进入10次CTP_Scan函数才检测1次,从而节省CPU使用率 */
+    if (gt9xxx_rd_reg(GT9XXX_GSTID_REG, &mode, 1U) != 0U)
     {
-        gt9xxx_rd_reg(GT9XXX_GSTID_REG, &mode, 1);  /* 读取触摸点的状态 */
-
-        if ((mode & 0X80) && ((mode & 0XF) <= g_gt_tnum))
-        {
-            i = 0;
-            gt9xxx_wr_reg(GT9XXX_GSTID_REG, &i, 1); /* 清标志 */
-        }
-
-        if ((mode & 0XF) && ((mode & 0XF) <= g_gt_tnum))
-        {
-            temp = 0XFFFF << (mode & 0XF);  /* 将点的个数转换为1的位数,匹配tp_dev.sta定义 */
-            tempsta = tp_dev.sta;           /* 保存当前的tp_dev.sta值 */
-            tp_dev.sta = (~temp) | TP_PRES_DOWN | TP_CATH_PRES;
-            tp_dev.x[g_gt_tnum - 1] = tp_dev.x[0];  /* 保存触点0的数据,保存在最后一个上 */
-            tp_dev.y[g_gt_tnum - 1] = tp_dev.y[0];
-
-            for (i = 0; i < g_gt_tnum; i++)
-            {
-                if (tp_dev.sta & (1 << i))  /* 触摸有效? */
-                {
-                    gt9xxx_rd_reg(GT9XXX_TPX_TBL[i], buf, 4);   /* 读取XY坐标值 */
-
-                    if (rgblcddev.id == 0X5510 || rgblcddev.id == 0X9806 || rgblcddev.id == 0X7796)     /* 4.3寸800*480 和 3.5寸480*320 MCU屏 */
-                    {
-                        if (tp_dev.touchtype & 0X01)    /* 横屏 */
-                        {
-                            tp_dev.x[i] = rgblcddev.width - (((uint16_t)buf[3] << 8) + buf[2]);
-                            tp_dev.y[i] = ((uint16_t)buf[1] << 8) + buf[0];
-                        }
-                        else
-                        {
-                            tp_dev.x[i] = ((uint16_t)buf[1] << 8) + buf[0];
-                            tp_dev.y[i] = ((uint16_t)buf[3] << 8) + buf[2];
-                        }
-                    }
-                    else    /* 其他型号 */
-                    {
-                        if (tp_dev.touchtype & 0X01)    /* 横屏 */
-                        {
-                            tp_dev.x[i] = ((uint16_t)buf[1] << 8) + buf[0];
-                            tp_dev.y[i] = ((uint16_t)buf[3] << 8) + buf[2];
-                        }
-                        else
-                        {
-                            tp_dev.x[i] = rgblcddev.width - (((uint16_t)buf[3] << 8) + buf[2]);
-                            tp_dev.y[i] = ((uint16_t)buf[1] << 8) + buf[0];
-                        }
-                    }
-
-                    //printf("x[%d]:%d,y[%d]:%d\r\n", i, tp_dev.x[i], i, tp_dev.y[i]);
-                }
-            }
-
-            res = 1;
-
-            if (tp_dev.x[0] > rgblcddev.width || tp_dev.y[0] > rgblcddev.height)  /* 非法数据(坐标超出了) */
-            {
-                if ((mode & 0XF) > 1)   /* 有其他点有数据,则复第二个触点的数据到第一个触点. */
-                {
-                    tp_dev.x[0] = tp_dev.x[1];
-                    tp_dev.y[0] = tp_dev.y[1];
-                    t = 0;  /* 触发一次,则会最少连续监测10次,从而提高命中率 */
-                }
-                else        /* 非法数据,则忽略此次数据(还原原来的) */
-                {
-                    tp_dev.x[0] = tp_dev.x[g_gt_tnum - 1];
-                    tp_dev.y[0] = tp_dev.y[g_gt_tnum - 1];
-                    mode = 0X80;
-                    tp_dev.sta = tempsta;   /* 恢复tp_dev.sta */
-                }
-            }
-            else 
-            {
-                t = 0;      /* 触发一次,则会最少连续监测10次,从而提高命中率 */
-            }
-        }
+        tp_dev.sta = 0U;
+        return 0U;
+    }
+    /* Leave the previous touch state unchanged until a new complete report. */
+    if ((mode & 0x80U) == 0U) { return 0U; }
+    count = mode & 0x0FU;
+    if ((count > g_gt_tnum) || (count > 10U))
+    {
+        (void)gt9xxx_wr_reg(GT9XXX_GSTID_REG, &clear, 1U);
+        tp_dev.sta = 0U;
+        return 0U;
+    }
+    /* X/Y records are eight bytes apart. Fetch all coordinates in one
+     * contiguous transaction, then acknowledge the report only after reading. */
+    if ((count != 0U) &&
+        (gt9xxx_rd_reg(GT9XXX_TP1_REG, points,
+                       (uint8_t)((count - 1U) * 8U + 4U)) != 0U))
+    {
+        tp_dev.sta = 0U;
+        return 0U;
+    }
+    if (gt9xxx_wr_reg(GT9XXX_GSTID_REG, &clear, 1U) != 0U)
+    {
+        tp_dev.sta = 0U;
+        return 0U;
+    }
+    if (count == 0U)
+    {
+        tp_dev.sta = 0U;
+        return 0U;
     }
 
-    if ((mode & 0X8F) == 0X80)              /* 无触摸点按下 */
+    tp_dev.sta = (uint16_t)((1U << count) - 1U) | TP_PRES_DOWN | TP_CATH_PRES;
+    for (i = 0U; i < count; i++)
     {
-        if (tp_dev.sta & TP_PRES_DOWN)      /* 之前是被按下的 */
+        const uint8_t *buf = &points[i * 8U];
+        if ((tp_dev.touchtype & 0x01U) != 0U)
         {
-            tp_dev.sta &= ~TP_PRES_DOWN;    /* 标记按键松开 */
+            tp_dev.x[i] = ((uint16_t)buf[1] << 8U) + buf[0];
+            tp_dev.y[i] = ((uint16_t)buf[3] << 8U) + buf[2];
         }
-        else                                /* 之前就没有被按下 */
+        else
         {
-            tp_dev.x[0] = 0xffff;
-            tp_dev.y[0] = 0xffff;
-            tp_dev.sta &= 0XE000;           /* 清除点有效标记 */
+            uint16_t raw_y = ((uint16_t)buf[3] << 8U) + buf[2];
+            if (raw_y >= TOUCH_LCD_WIDTH)
+            {
+                tp_dev.sta &= (uint16_t)~(1U << i);
+                continue;
+            }
+            tp_dev.x[i] = TOUCH_LCD_WIDTH - 1U - raw_y;
+            tp_dev.y[i] = ((uint16_t)buf[1] << 8U) + buf[0];
+        }
+        if ((tp_dev.x[i] < TOUCH_LCD_WIDTH) && (tp_dev.y[i] < TOUCH_LCD_HEIGHT))
+        {
+            if (first_valid == 0xFFU) { first_valid = i; }
+        }
+        else
+        {
+            tp_dev.sta &= (uint16_t)~(1U << i);
         }
     }
-
-    if (t > 240)t = 10;                     /* 重新从10开始计数 */
-
-    return res;
+    if (first_valid == 0xFFU)
+    {
+        tp_dev.sta = 0U;
+        return 0U;
+    }
+    if (first_valid != 0U)
+    {
+        tp_dev.x[0] = tp_dev.x[first_valid];
+        tp_dev.y[0] = tp_dev.y[first_valid];
+    }
+    t = 0U;
+    return 1U;
 }
 
 

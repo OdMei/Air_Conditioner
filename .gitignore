@@ -17,6 +17,13 @@
 *.log
 *.launch
 
+# Paired model weights are required inputs, not disposable build output.
+!Project/Project/Air_Conditioner/Model/network_data.xSPI2.bin
+
+# Python interpreter caches
+__pycache__/
+*.py[cod]
+
 # Workspace and editor state
 .metadata/
 .settings/.cache/

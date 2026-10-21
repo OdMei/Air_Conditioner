@@ -32,16 +32,22 @@
 
 #define REMOTE_ID               0
 
+/* Only temperature changes repeat while held. Toggle commands are edge events. */
+#define REMOTE_REPEAT_PERIOD_MS (200U)
+#define REMOTE_RELEASE_MS       (250U)
+#define REMOTE_REPEAT_UP_KEY    (9U)
+#define REMOTE_REPEAT_DOWN_KEY  (7U)
+
 /* IO操作 */
 #define REMOTE_DATA()           ((HAL_GPIO_ReadPin(REMOTE_DATA_GPIO_PORT, REMOTE_DATA_GPIO_PIN) == GPIO_PIN_RESET) ? 0 : 1)
 
 /* 变量导出 */
-extern uint8_t g_remote_sta;
-extern uint32_t g_remote_data;
-extern uint8_t g_remote_cnt;
+extern volatile uint8_t g_remote_sta;
+extern volatile uint32_t g_remote_data;
+extern volatile uint8_t g_remote_cnt;
 
 /* 函数声明 */
 void remote_init(void);     /* 初始化红外遥控 */
-uint8_t remote_scan(void);  /* 扫描红外遥控键值 */
+uint8_t remote_scan(void);  /* Consume one press, or a rate-limited temperature repeat. */
 
 #endif

@@ -1,4 +1,5 @@
 Model/st_ai_output/
 Model/st_ai_ws/
 Model/*.xSPI2.bin
+!Model/network_data.xSPI2.bin
 Model/*.hex

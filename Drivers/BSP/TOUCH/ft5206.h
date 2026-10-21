@@ -46,7 +46,7 @@
 
 #define FT5206_INT        HAL_GPIO_ReadPin(FT5206_INT_GPIO_PORT, FT5206_INT_GPIO_PIN)     /* 读取做的引脚 */
 
-/* IIC读写命令 */
+/* I2C constants already use (7-bit address << 1); HAL supplies the R/W bit. */
 #define FT5206_CMD_WR               0X70        /* 写命令(最低位为0) */
 #define FT5206_CMD_RD               0X71        /* 读命令(最低位为1) */
 
@@ -68,7 +68,7 @@
 
 
 uint8_t ft5206_wr_reg(uint16_t reg,uint8_t *buf,uint8_t len);
-void ft5206_rd_reg(uint16_t reg,uint8_t *buf,uint8_t len);
+uint8_t ft5206_rd_reg(uint16_t reg,uint8_t *buf,uint8_t len);
 uint8_t ft5206_init(void);
 uint8_t ft5206_scan(uint8_t mode);
 

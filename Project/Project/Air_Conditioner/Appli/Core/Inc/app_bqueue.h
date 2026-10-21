@@ -38,5 +38,9 @@ uint8_t *app_bqueue_get_free(app_bqueue_t *bqueue, uint8_t is_blocking);
 void app_bqueue_put_free(app_bqueue_t *bqueue);
 uint8_t *app_bqueue_get_ready(app_bqueue_t *bqueue);
 void app_bqueue_put_ready(app_bqueue_t *bqueue);
+/* Reset only after the DMA producer and both workers have acknowledged stop. */
+void app_bqueue_reset(app_bqueue_t *bqueue);
+uint8_t *app_bqueue_get_ready_timeout(app_bqueue_t *bqueue, ULONG wait_ticks);
+uint8_t *app_bqueue_get_free_timeout(app_bqueue_t *bqueue, ULONG wait_ticks);
 
 #endif

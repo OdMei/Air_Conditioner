@@ -46,4 +46,24 @@ extern uint16_t g_uart_rx_sta;              /* 串口接收状态标记 */
 /* 函数声明 */
 void uart_init(uint32_t baudrate);             /* 初始化串口 */
 
+/* Non-blocking application logging. Start once after uart_init, then let one
+ * background thread call uart_tx_process. Complete records are accepted or
+ * dropped together; producers never wait for the peripheral. */
+#define UART_TX_LINE_MAX (512U)
+typedef struct
+{
+    uint32_t queued_bytes;
+    uint32_t high_water_bytes;
+    uint32_t sent_bytes;
+    uint32_t dropped_bytes;
+    uint32_t dropped_lines;
+    uint32_t tx_errors;
+    uint32_t last_hal_status;
+} uart_tx_stats_t;
+
+void uart_tx_start(void);
+uint8_t uart_tx_enqueue_line(const char *data, uint16_t length);
+void uart_tx_process(void);
+void uart_tx_get_stats(uart_tx_stats_t *stats);
+
 #endif

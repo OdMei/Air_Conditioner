@@ -1,7 +1,7 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version='1.0' encoding='UTF-8'?>
 <projectDescription>
 	<name>991_AI_People_Detection_Appli</name>
-	<comment></comment>
+	<comment />
 	<projects>
 	</projects>
 	<buildSpec>
@@ -236,6 +236,41 @@
 			<locationURI>PARENT-2-PROJECT_LOC/Appli/Core/Src/app_input_logic.c</locationURI>
 		</link>
 		<link>
+			<name>Drivers/STM32N6xx_HAL_Driver/stm32n6xx_hal_tim.c</name>
+			<type>1</type>
+			<locationURI>PARENT-5-PROJECT_LOC/STM32Cube_FW_N6_V1.0.0/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_tim.c</locationURI>
+		</link>
+		<link>
+			<name>Drivers/STM32N6xx_HAL_Driver/stm32n6xx_hal_tim_ex.c</name>
+			<type>1</type>
+			<locationURI>PARENT-5-PROJECT_LOC/STM32Cube_FW_N6_V1.0.0/Drivers/STM32N6xx_HAL_Driver/Src/stm32n6xx_hal_tim_ex.c</locationURI>
+		</link>
+		<link>
+			<name>Application/User/Core/app_climate_logic.c</name>
+			<type>1</type>
+			<locationURI>PARENT-2-PROJECT_LOC/Appli/Core/Src/app_climate_logic.c</locationURI>
+		</link>
+		<link>
+			<name>Application/User/Core/app_ui.c</name>
+			<type>1</type>
+			<locationURI>PARENT-2-PROJECT_LOC/Appli/Core/Src/app_ui.c</locationURI>
+		</link>
+		<link>
+			<name>Application/User/Core/app_ui_pixels.c</name>
+			<type>1</type>
+			<locationURI>PARENT-2-PROJECT_LOC/Appli/Core/Src/app_ui_pixels.c</locationURI>
+		</link>
+		<link>
+			<name>Application/User/Core/app_perf_window.c</name>
+			<type>1</type>
+			<locationURI>PARENT-2-PROJECT_LOC/Appli/Core/Src/app_perf_window.c</locationURI>
+		</link>
+		<link>
+			<name>Application/User/Core/app_bg_buffers.c</name>
+			<type>1</type>
+			<locationURI>PARENT-2-PROJECT_LOC/Appli/Core/Src/app_bg_buffers.c</locationURI>
+		</link>
+		<link>
 			<name>Application/User/Core/app_bqueue.c</name>
 			<type>1</type>
 			<locationURI>PARENT-2-PROJECT_LOC/Appli/Core/Src/app_bqueue.c</locationURI>
@@ -306,6 +341,36 @@
 			<locationURI>PARENT-5-PROJECT_LOC/Drivers/BSP/DHT11/dht11.c</locationURI>
 		</link>
 		<link>
+			<name>Drivers/BSP/AP3216C/ap3216c.c</name>
+			<type>1</type>
+			<locationURI>PARENT-5-PROJECT_LOC/Drivers/BSP/AP3216C/ap3216c.c</locationURI>
+		</link>
+		<link>
+			<name>Drivers/BSP/REMOTE/remote.c</name>
+			<type>1</type>
+			<locationURI>PARENT-5-PROJECT_LOC/Drivers/BSP/REMOTE/remote.c</locationURI>
+		</link>
+		<link>
+			<name>Drivers/BSP/TOUCH/ft5206.c</name>
+			<type>1</type>
+			<locationURI>PARENT-5-PROJECT_LOC/Drivers/BSP/TOUCH/ft5206.c</locationURI>
+		</link>
+		<link>
+			<name>Drivers/BSP/TOUCH/ctiic.c</name>
+			<type>1</type>
+			<locationURI>PARENT-5-PROJECT_LOC/Drivers/BSP/TOUCH/ctiic.c</locationURI>
+		</link>
+		<link>
+			<name>Drivers/BSP/TOUCH/gt9xxx.c</name>
+			<type>1</type>
+			<locationURI>PARENT-5-PROJECT_LOC/Drivers/BSP/TOUCH/gt9xxx.c</locationURI>
+		</link>
+		<link>
+			<name>Application/User/Core/app_touch.c</name>
+			<type>1</type>
+			<locationURI>PARENT-2-PROJECT_LOC/Appli/Core/Src/app_touch.c</locationURI>
+		</link>
+		<link>
 			<name>Drivers/BSP/HyperRAM/hyperram.c</name>
 			<type>1</type>
 			<locationURI>PARENT-5-PROJECT_LOC/Drivers/BSP/HyperRAM/hyperram.c</locationURI>
@@ -319,6 +384,16 @@
 			<name>Drivers/BSP/Inc/DHT11</name>
 			<type>2</type>
 			<locationURI>PARENT-5-PROJECT_LOC/Drivers/BSP/DHT11</locationURI>
+		</link>
+		<link>
+			<name>Drivers/BSP/Inc/AP3216C</name>
+			<type>2</type>
+			<locationURI>PARENT-5-PROJECT_LOC/Drivers/BSP/AP3216C</locationURI>
+		</link>
+		<link>
+			<name>Drivers/BSP/Inc/REMOTE</name>
+			<type>2</type>
+			<locationURI>PARENT-5-PROJECT_LOC/Drivers/BSP/REMOTE</locationURI>
 		</link>
 		<link>
 			<name>Drivers/BSP/Inc/HyperRAM</name>
@@ -339,6 +414,11 @@
 			<name>Drivers/BSP/Inc/SYS</name>
 			<type>2</type>
 			<locationURI>PARENT-5-PROJECT_LOC/Drivers/BSP/SYS</locationURI>
+		</link>
+		<link>
+			<name>Drivers/BSP/Inc/TOUCH</name>
+			<type>2</type>
+			<locationURI>PARENT-5-PROJECT_LOC/Drivers/BSP/TOUCH</locationURI>
 		</link>
 		<link>
 			<name>Drivers/BSP/Inc/LED</name>
@@ -1531,6 +1611,76 @@
 			<locationURI>PARENT-5-PROJECT_LOC/STM32Cube_FW_N6_V1.0.0/Drivers/CMSIS/DSP/Include</locationURI>
 		</link>
 		<link>
+			<name>Middlewares/LVGL</name>
+			<type>2</type>
+			<locationURI>PARENT-5-PROJECT_LOC/Middlewares/LVGL/src</locationURI>
+		</link>
+		<link>
+			<name>Middlewares/STM32_MW_CAMERA/sensors/imx335/imx335.c</name>
+			<type>1</type>
+			<locationURI>PARENT-5-PROJECT_LOC/Middlewares/STM32_MW_CAMERA/sensors/imx335/imx335.c</locationURI>
+		</link>
+		<link>
+			<name>Middlewares/STM32_MW_CAMERA/sensors/imx335/imx335_reg.c</name>
+			<type>1</type>
+			<locationURI>PARENT-5-PROJECT_LOC/Middlewares/STM32_MW_CAMERA/sensors/imx335/imx335_reg.c</locationURI>
+		</link>
+		<link>
+			<name>Application/User/Core/app_font_ui_16.c</name>
+			<type>1</type>
+			<locationURI>PARENT-2-PROJECT_LOC/Appli/Core/Src/app_font_ui_16.c</locationURI>
+		</link>
+		<link>
+			<name>Application/User/Core/app_environment_alert.c</name>
+			<type>1</type>
+			<locationURI>PARENT-2-PROJECT_LOC/Appli/Core/Src/app_environment_alert.c</locationURI>
+		</link>
+		<link>
+			<name>Application/User/Core/app_event_journal.c</name>
+			<type>1</type>
+			<locationURI>PARENT-2-PROJECT_LOC/Appli/Core/Src/app_event_journal.c</locationURI>
+		</link>
+		<link>
+			<name>Application/User/Core/app_ui_environment.c</name>
+			<type>1</type>
+			<locationURI>PARENT-2-PROJECT_LOC/Appli/Core/Src/app_ui_environment.c</locationURI>
+		</link>
+		<link>
+			<name>Application/User/Core/app_ui_journal.c</name>
+			<type>1</type>
+			<locationURI>PARENT-2-PROJECT_LOC/Appli/Core/Src/app_ui_journal.c</locationURI>
+		</link>
+		<link>
+			<name>Application/User/Core/app_ui_theme.c</name>
+			<type>1</type>
+			<locationURI>PARENT-2-PROJECT_LOC/Appli/Core/Src/app_ui_theme.c</locationURI>
+		</link>
+		<link>
+			<name>Application/User/Core/app_ui_controls.c</name>
+			<type>1</type>
+			<locationURI>PARENT-2-PROJECT_LOC/Appli/Core/Src/app_ui_controls.c</locationURI>
+		</link>
+		<link>
+			<name>Application/User/Core/app_detection_smoother.c</name>
+			<type>1</type>
+			<locationURI>PARENT-2-PROJECT_LOC/Appli/Core/Src/app_detection_smoother.c</locationURI>
+		</link>
+		<link>
+			<name>Application/User/Core/app_ui_insights.c</name>
+			<type>1</type>
+			<locationURI>PARENT-2-PROJECT_LOC/Appli/Core/Src/app_ui_insights.c</locationURI>
+		</link>
+		<link>
+			<name>Application/User/Core/app_history.c</name>
+			<type>1</type>
+			<locationURI>PARENT-2-PROJECT_LOC/Appli/Core/Src/app_history.c</locationURI>
+		</link>
+		<link>
+			<name>Application/User/Core/app_demo_engine.c</name>
+			<type>1</type>
+			<locationURI>PARENT-2-PROJECT_LOC/Appli/Core/Src/app_demo_engine.c</locationURI>
+		</link>
+		<link>
 			<name>Middlewares/AI/Npu/ll_aton/ecloader.c</name>
 			<type>1</type>
 			<locationURI>PARENT-5-PROJECT_LOC/Middlewares/AI/Npu/ll_aton/ecloader.c</locationURI>
@@ -1566,26 +1716,6 @@
 			<locationURI>PARENT-5-PROJECT_LOC/Middlewares/AI/Npu/ll_aton/ll_aton_lib_sw_operators.c</locationURI>
 		</link>
 		<link>
-			<name>Middlewares/AI/Npu/ll_aton/ll_aton_n64.c</name>
-			<type>1</type>
-			<locationURI>PARENT-5-PROJECT_LOC/Middlewares/AI/Npu/ll_aton/ll_aton_n64.c</locationURI>
-		</link>
-		<link>
-			<name>Middlewares/AI/Npu/ll_aton/ll_aton_osal_freertos.c</name>
-			<type>1</type>
-			<locationURI>PARENT-5-PROJECT_LOC/Middlewares/AI/Npu/ll_aton/ll_aton_osal_freertos.c</locationURI>
-		</link>
-		<link>
-			<name>Middlewares/AI/Npu/ll_aton/ll_aton_osal_linux_bw.c</name>
-			<type>1</type>
-			<locationURI>PARENT-5-PROJECT_LOC/Middlewares/AI/Npu/ll_aton/ll_aton_osal_linux_bw.c</locationURI>
-		</link>
-		<link>
-			<name>Middlewares/AI/Npu/ll_aton/ll_aton_osal_linux_uio.c</name>
-			<type>1</type>
-			<locationURI>PARENT-5-PROJECT_LOC/Middlewares/AI/Npu/ll_aton/ll_aton_osal_linux_uio.c</locationURI>
-		</link>
-		<link>
 			<name>Middlewares/AI/Npu/ll_aton/ll_aton_osal_threadx.c</name>
 			<type>1</type>
 			<locationURI>PARENT-5-PROJECT_LOC/Middlewares/AI/Npu/ll_aton/ll_aton_osal_threadx.c</locationURI>
@@ -1606,6 +1736,11 @@
 			<locationURI>PARENT-5-PROJECT_LOC/Middlewares/AI/Npu/ll_aton/ll_aton_runtime.c</locationURI>
 		</link>
 		<link>
+			<name>Middlewares/AI/Npu/ll_aton/ll_aton_stai_internal.c</name>
+			<type>1</type>
+			<locationURI>PARENT-5-PROJECT_LOC/Middlewares/AI/Npu/ll_aton/ll_aton_stai_internal.c</locationURI>
+		</link>
+		<link>
 			<name>Middlewares/AI/Npu/ll_aton/ll_aton_util.c</name>
 			<type>1</type>
 			<locationURI>PARENT-5-PROJECT_LOC/Middlewares/AI/Npu/ll_aton/ll_aton_util.c</locationURI>
@@ -1621,16 +1756,6 @@
 			<locationURI>PARENT-5-PROJECT_LOC/Middlewares/AI/Npu/ll_aton/ll_sw_integer.c</locationURI>
 		</link>
 		<link>
-			<name>Middlewares/STM32_MW_CAMERA/sensors/imx335/imx335.c</name>
-			<type>1</type>
-			<locationURI>PARENT-5-PROJECT_LOC/Middlewares/STM32_MW_CAMERA/sensors/imx335/imx335.c</locationURI>
-		</link>
-		<link>
-			<name>Middlewares/STM32_MW_CAMERA/sensors/imx335/imx335_reg.c</name>
-			<type>1</type>
-			<locationURI>PARENT-5-PROJECT_LOC/Middlewares/STM32_MW_CAMERA/sensors/imx335/imx335_reg.c</locationURI>
-		</link>
-		<link>
 			<name>Middlewares/AI/Npu/Devices/STM32N6XX/mcu_cache.c</name>
 			<type>1</type>
 			<locationURI>PARENT-5-PROJECT_LOC/Middlewares/AI/Npu/Devices/STM32N6XX/mcu_cache.c</locationURI>
@@ -1639,6 +1764,26 @@
 			<name>Middlewares/AI/Npu/Devices/STM32N6XX/npu_cache.c</name>
 			<type>1</type>
 			<locationURI>PARENT-5-PROJECT_LOC/Middlewares/AI/Npu/Devices/STM32N6XX/npu_cache.c</locationURI>
+		</link>
+		<link>
+			<name>Application/User/Core/app_model_contract.c</name>
+			<type>1</type>
+			<locationURI>PARENT-2-PROJECT_LOC/Appli/Core/Src/app_model_contract.c</locationURI>
+		</link>
+		<link>
+			<name>Application/User/Core/app_ui_watch_home.c</name>
+			<type>1</type>
+			<locationURI>PARENT-2-PROJECT_LOC/Appli/Core/Src/app_ui_watch_home.c</locationURI>
+		</link>
+		<link>
+			<name>Application/User/Core/app_ui_watch_assets.c</name>
+			<type>1</type>
+			<locationURI>PARENT-2-PROJECT_LOC/Appli/Core/Src/app_ui_watch_assets.c</locationURI>
+		</link>
+		<link>
+			<name>Application/User/Core/app_ui_temperature_input.c</name>
+			<type>1</type>
+			<locationURI>PARENT-2-PROJECT_LOC/Appli/Core/Src/app_ui_temperature_input.c</locationURI>
 		</link>
 	</linkedResources>
 </projectDescription>

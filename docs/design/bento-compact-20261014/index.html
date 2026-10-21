@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>温湿度小卡 · 实际 LVGL 前后对比</title>
+<style>
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;padding:28px;font:16px/1.7 system-ui,"Microsoft YaHei",sans-serif;background:#071a2a;color:#dceaf0}
+main{max-width:920px;margin:auto}
+h1{font-size:26px;font-weight:600;margin:0 0 6px}
+p{color:#aec1ce;margin:0 0 18px}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}
+button{background:#0d2c40;color:#dceaf0;border:1px solid #345064;border-radius:10px;padding:9px 16px;font:inherit;cursor:pointer}
+button[aria-pressed=true]{background:#12483f;border-color:#6ef2d1;color:#a9ffe7}
+button:focus-visible,input:focus-visible{outline:2px solid #6ef2d1;outline-offset:4px}
+.stage{position:relative;width:800px;max-width:100%;aspect-ratio:5/3;overflow:hidden;border:1px solid #345064;border-radius:16px;background:#071a2a}
+.stage img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.before{clip-path:inset(0 50% 0 0)}
+.divider{position:absolute;top:0;bottom:0;left:50%;width:2px;background:#fff8;pointer-events:none}
+.slider{max-width:800px;margin:15px 0 26px;display:flex;gap:16px;align-items:center}
+.slider input{flex:1;min-width:0;accent-color:#6ef2d1;cursor:ew-resize}
+.slider span{color:#b6cbd5;white-space:nowrap}
+.caption{font-size:14px;color:#adc9d7;margin:10px 0 20px}
+table{border-collapse:collapse;width:100%;background:#0d2c40;border-radius:12px;overflow:hidden}
+th,td{text-align:left;border-bottom:1px solid #2a4152;padding:12px 16px}
+th{color:#a0edd9}td{color:#bdced8}
+.status{font-size:14px;margin-top:20px;color:#a3b8c7}
+a{color:#86e4cd}
+@media(max-width:650px){body{padding:14px}td,th{padding:9px 8px;font-size:14px}h1{font-size:22px}.slider{gap:10px;font-size:14px}}
+</style>
+</head>
+<body>
+<main>
+<h1>卡片更小，数字更醒目</h1>
+<p>保留亮绿温度、青色湿度和鲜艳蓝色波浪。两张彩色卡缩小后并排放在一行，最新稿将读数由 32px 放大到 40px。以下均为实际 LVGL 渲染，使用 PC 模拟数据。</p>
+<div class="toolbar" aria-label="选择对比版本">
+<button type="button" data-mode="latest" aria-pressed="true">最新 · 40px 大读数</button>
+<button type="button" data-mode="compact" aria-pressed="false">一行小卡 · 32px</button>
+<button type="button" data-mode="original" aria-pressed="false">原大卡 · 上下排列</button>
+<button type="button" data-mode="compare" aria-pressed="false">原大卡／最新拖动对比</button>
+</div>
+<div class="stage">
+<img id="base" src="../../images/ui-bento-compact-row40-20261014/bento_home.png" alt="最新一行温湿度小卡，40px读数，实际LVGL主页">
+<img class="before" src="../../images/ui-bento-vivid-wave-20261014/bento_home.png" alt="原上下排列温湿度大卡，实际LVGL主页" hidden>
+<div class="divider" hidden></div>
+</div>
+<div class="slider" hidden><span>原大卡</span><input id="split" type="range" min="0" max="100" value="50" aria-label="拖动查看原大卡与最新一行大读数小卡"><span>最新小卡</span></div>
+<p class="caption" id="caption" aria-live="polite">最新：两张 148×70px 卡片并排，数字 40px、单位 20px。画布保持 800×480。</p>
+<table>
+<thead><tr><th scope="col">项目</th><th scope="col">原大卡</th><th scope="col">最新小卡</th></tr></thead>
+<tbody>
+<tr><th scope="row">卡片尺寸</th><td>每张 308×96px</td><td>每张 148×70px，彩色面积缩小约 65%</td></tr>
+<tr><th scope="row">排列</th><td>上下两张</td><td>一行两张，右侧留白更多</td></tr>
+<tr><th scope="row">读数</th><td>48px</td><td>40px，比一行初稿的 32px 放大 25%</td></tr>
+<tr><th scope="row">配色</th><td>亮绿温度、青色湿度</td><td>继续保留，数字与单位保持深色</td></tr>
+<tr><th scope="row">原有功能</th><td colspan="2">控制、拖环调温、数据、记录、提醒、视觉与诊断功能保留。</td></tr>
+</tbody>
+</table>
+<p class="status">最新稿已于2026-10-15烧录并完整回读校验，用户已确认Flash启动后新界面、调温、触摸和摄像头正常。截图展示模拟值，不能代表此刻开发板上的传感器读数。<a href="../../ui-bento-compact-20261014.md">小卡实现与验证记录</a></p>
+</main>
+<script>
+const versions={
+  latest:{src:'../../images/ui-bento-compact-row40-20261014/bento_home.png',alt:'最新一行温湿度小卡，40px读数，实际LVGL主页',caption:'最新：两张 148×70px 卡片并排，数字 40px、单位 20px。画布保持 800×480。'},
+  compact:{src:'../../images/ui-bento-compact-row-20261014/bento_home.png',alt:'一行温湿度小卡，32px读数，实际LVGL主页',caption:'一行初稿：两张 148×70px 卡片并排，数字 32px。'},
+  original:{src:'../../images/ui-bento-vivid-wave-20261014/bento_home.png',alt:'原上下排列温湿度大卡，实际LVGL主页',caption:'原大卡：两张 308×96px 卡片上下排列，数字 48px。'}
+};
+const base=document.getElementById('base');
+const before=document.querySelector('.before');
+const divider=document.querySelector('.divider');
+const slider=document.querySelector('.slider');
+const split=document.getElementById('split');
+const caption=document.getElementById('caption');
+const buttons=Array.from(document.querySelectorAll('button[data-mode]'));
+function setSplit(value){before.style.clipPath='inset(0 '+(100-Number(value))+'% 0 0)';divider.style.left=value+'%';}
+function selectVersion(button){
+  const compare=button.dataset.mode==='compare';
+  const version=versions[compare?'latest':button.dataset.mode];
+  buttons.forEach(item=>item.setAttribute('aria-pressed',String(item===button)));
+  base.src=version.src;
+  base.alt=version.alt;
+  before.hidden=!compare;
+  divider.hidden=!compare;
+  slider.hidden=!compare;
+  caption.textContent=compare?'拖动滑块：左侧为原大卡，右侧为最新一行小卡。使用相同尺寸的 800×480 实际 LVGL 画布。':version.caption;
+  setSplit(split.value);
+}
+split.addEventListener('input',()=>setSplit(split.value));
+buttons.forEach(button=>button.addEventListener('click',()=>selectVersion(button)));
+</script>
+</body>
+</html>

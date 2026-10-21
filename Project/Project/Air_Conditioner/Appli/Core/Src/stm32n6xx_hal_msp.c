@@ -172,6 +172,21 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef* hi2c)
   /* USER CODE END I2C2_MspInit 1 */
 
   }
+  else if(hi2c->Instance==I2C4)
+  {
+    PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_I2C4;
+    PeriphClkInitStruct.I2c4ClockSelection = RCC_I2C4CLKSOURCE_CLKP;
+    if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
+    { Error_Handler(); }
+    __HAL_RCC_GPIOE_CLK_ENABLE();
+    GPIO_InitStruct.Pin = GPIO_PIN_13|GPIO_PIN_14;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+    GPIO_InitStruct.Alternate = GPIO_AF4_I2C4;
+    HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
+    __HAL_RCC_I2C4_CLK_ENABLE();
+  }
 
 }
 
@@ -203,7 +218,43 @@ void HAL_I2C_MspDeInit(I2C_HandleTypeDef* hi2c)
 
   /* USER CODE END I2C2_MspDeInit 1 */
   }
+  else if(hi2c->Instance==I2C4)
+  {
+    __HAL_RCC_I2C4_CLK_DISABLE();
+    HAL_GPIO_DeInit(GPIOE, GPIO_PIN_13|GPIO_PIN_14);
+  }
 
+}
+
+void HAL_TIM_Base_MspInit(TIM_HandleTypeDef *htim_base)
+{
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
+  if (htim_base->Instance == TIM1)
+  {
+    __HAL_RCC_TIM1_CLK_ENABLE();
+    __HAL_RCC_GPIOE_CLK_ENABLE();
+    GPIO_InitStruct.Pin = GPIO_PIN_9;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_InitStruct.Alternate = GPIO_AF1_TIM1;
+    HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
+    HAL_NVIC_SetPriority(TIM1_UP_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(TIM1_UP_IRQn);
+    HAL_NVIC_SetPriority(TIM1_CC_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(TIM1_CC_IRQn);
+  }
+}
+
+void HAL_TIM_Base_MspDeInit(TIM_HandleTypeDef *htim_base)
+{
+  if (htim_base->Instance == TIM1)
+  {
+    __HAL_RCC_TIM1_CLK_DISABLE();
+    HAL_GPIO_DeInit(GPIOE, GPIO_PIN_9);
+    HAL_NVIC_DisableIRQ(TIM1_UP_IRQn);
+    HAL_NVIC_DisableIRQ(TIM1_CC_IRQn);
+  }
 }
 
 /**

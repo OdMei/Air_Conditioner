@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>V11 色彩与 Bento 结构 · 实际 LVGL 对比</title>
+<style>
+*{box-sizing:border-box}body{margin:0;padding:28px;font:16px/1.7 system-ui,"Microsoft YaHei",sans-serif;background:#071a2a;color:#dceaf0}main{max-width:920px;margin:auto}h1{font-size:26px;font-weight:600;margin:0 0 6px}p{color:#aec1ce;margin:0 0 18px}.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}button{background:#0d2c40;color:#dceaf0;border:1px solid #345064;border-radius:10px;padding:9px 16px;font:inherit;cursor:pointer}button[aria-pressed=true]{background:#12483f;border-color:#6ef2d1;color:#a9ffe7}.stage{position:relative;width:800px;max-width:100%;aspect-ratio:5/3;overflow:hidden;border:1px solid #345064;border-radius:16px;background:#071a2a}.stage img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}.old{clip-path:inset(0 50% 0 0)}.divider{position:absolute;top:0;bottom:0;left:50%;width:2px;background:#fff8;pointer-events:none}.slider{max-width:800px;margin:15px 0 26px;display:flex;gap:16px;align-items:center}.slider input{flex:1;accent-color:#6ef2d1;cursor:ew-resize}.slider span{color:#b6cbd5;white-space:nowrap}table{border-collapse:collapse;width:100%;background:#0d2c40;border-radius:12px;overflow:hidden}th,td{text-align:left;border-bottom:1px solid #2a4152;padding:12px 16px}th{color:#a0edd9}td{color:#bdced8}.status{font-size:14px;margin-top:20px;color:#a3b8c7}a{color:#86e4cd}@media(max-width:650px){body{padding:14px}td,th{padding:9px 8px;font-size:14px}h1{font-size:22px}}
+</style>
+<style>[hidden]{display:none!important}</style>
+<main>
+<h1>保留 V11 的色彩，改进分组与操作</h1>
+<p>各版都是实际 LVGL 渲染图，使用相同的 PC 模拟数据。最新融合稿按你的反馈进一步增强蓝色波浪，保留亮绿温度卡、青色湿度卡和已确认的 Bento 布局。</p>
+<div class="toolbar">
+<button data-mode="vivid" aria-pressed="true">鲜艳融合稿</button>
+<button data-mode="soft" aria-pressed="false">波浪加强前</button>
+<button data-mode="old" aria-pressed="false">旧 V11 · 已上板</button>
+<button data-mode="dark" aria-pressed="false">深色 Bento</button>
+<button data-mode="compare" aria-pressed="false">旧版／融合稿拖动对比</button>
+</div>
+<div class="stage">
+<img id="base" src="../../images/ui-bento-vivid-wave-20261014/bento_home.png" alt="增强蓝色波浪鲜艳融合稿实际LVGL主页">
+<img class="old" src="../../images/ui-bento-20261014/before-v11.png" alt="已上板V11实际LVGL主页" hidden>
+<div class="divider" hidden></div>
+</div>
+<div class="slider" hidden><span>旧 V11</span><input id="split" type="range" min="0" max="100" value="50" aria-label="拖动查看旧V11与鲜艳融合稿差异"><span>鲜艳融合稿</span></div>
+<table><thead><tr><th>保留的审美</th><th>保留的新改进</th></tr></thead><tbody>
+<tr><td>静态蓝色波浪，主温控卡透出背景</td><td>温控／实测／环境按主题分组、统一间距</td></tr>
+<tr><td>亮绿温度卡、青色湿度卡、深色数字</td><td>数字与单位基线对齐；失效卡变灰并提示</td></tr>
+<tr><td>薄荷绿细环与操作重点色</td><td>64×64 加减；拖环调温，轻点不跳温</td></tr>
+<tr><td>深色底部操作与导航，保持文字清晰</td><td>六项同字号两行文字；28px统一线宽图标</td></tr>
+</tbody></table>
+<p class="status">原有控制、数据、记录、提醒、视觉和诊断功能保留。融合稿尚未烧录，开发板仍运行 V11。<a href="../../ui-bento-vivid-20261014.md">融合稿实现与验证记录</a> · <a href="../bento-20261014/index.html">原深色稿对比</a></p>
+</main>
+<script>
+const images={vivid:'../../images/ui-bento-vivid-wave-20261014/bento_home.png',soft:'../../images/ui-bento-vivid-20261014/bento_home.png',old:'../../images/ui-bento-20261014/before-v11.png',dark:'../../images/ui-bento-20261014/bento_home.png'};
+const base=document.getElementById('base'),old=document.querySelector('.old'),line=document.querySelector('.divider'),slider=document.querySelector('.slider'),split=document.getElementById('split');
+function setSplit(v){old.style.clipPath='inset(0 '+(100-v)+'% 0 0)';line.style.left=v+'%';}
+split.addEventListener('input',()=>setSplit(split.value));
+document.querySelectorAll('button').forEach(button=>button.addEventListener('click',()=>{const mode=button.dataset.mode,compare=mode==='compare';document.querySelectorAll('button').forEach(item=>item.setAttribute('aria-pressed',String(item===button)));base.src=images[compare?'vivid':mode];base.alt=compare?'鲜艳融合稿实际LVGL主页':button.textContent+'实际LVGL主页';old.hidden=!compare;line.hidden=!compare;slider.hidden=!compare;setSplit(split.value);}));
+</script>
+</html>

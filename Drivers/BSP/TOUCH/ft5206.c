@@ -19,12 +19,9 @@
  */
 
 #include "string.h"
-#include "../RGBLCD/rgblcd.h"
 #include "touch.h"
-#include "ctiic.h"
 #include "ft5206.h"
-#include "../SYS/sys.h"
-
+#include "ctiic.h"
 
 /**
  * @brief       向FT5206写入一次数据
@@ -35,24 +32,7 @@
  */
 uint8_t ft5206_wr_reg(uint16_t reg, uint8_t *buf, uint8_t len)
 {
-    uint8_t i;
-    uint8_t ret = 0;
-    ct_iic_start();
-    ct_iic_send_byte(FT5206_CMD_WR);    /* 发送写命令 */
-    ct_iic_wait_ack();
-    ct_iic_send_byte(reg & 0XFF);       /* 发送低8位地址 */
-    ct_iic_wait_ack();
-
-    for (i = 0; i < len; i++)
-    {
-        ct_iic_send_byte(buf[i]);       /* 发数据 */
-        ret = ct_iic_wait_ack();
-
-        if (ret)break;
-    }
-
-    ct_iic_stop();  /* 产生一个停止条件 */
-    return ret;
+    return ct_iic_write_reg(FT5206_CMD_WR, reg, CT_IIC_REG8, buf, len);
 }
 
 /**
@@ -60,26 +40,11 @@ uint8_t ft5206_wr_reg(uint16_t reg, uint8_t *buf, uint8_t len)
  * @param       reg : 起始寄存器地址
  * @param       buf : 数据缓缓存区
  * @param       len : 读数据长度
- * @retval      无
+ * @retval      0, 成功; 1, 失败;
  */
-void ft5206_rd_reg(uint16_t reg, uint8_t *buf, uint8_t len)
+uint8_t ft5206_rd_reg(uint16_t reg, uint8_t *buf, uint8_t len)
 {
-    uint8_t i;
-    ct_iic_start();
-    ct_iic_send_byte(FT5206_CMD_WR);    /* 发送写命令 */
-    ct_iic_wait_ack();
-    ct_iic_send_byte(reg & 0XFF);       /* 发送低8位地址 */
-    ct_iic_wait_ack();
-    ct_iic_start();
-    ct_iic_send_byte(FT5206_CMD_RD);    /* 发送读命令 */
-    ct_iic_wait_ack();
-
-    for (i = 0; i < len; i++)
-    {
-        buf[i] = ct_iic_read_byte(i == (len - 1) ? 0 : 1);  /* 读取数据 */
-    }
-
-    ct_iic_stop();  /* 产生一个停止条件 */
+    return ct_iic_read_reg(FT5206_CMD_WR, reg, CT_IIC_REG8, buf, len);
 }
 
 /**
@@ -89,8 +54,8 @@ void ft5206_rd_reg(uint16_t reg, uint8_t *buf, uint8_t len)
  */
 uint8_t ft5206_init(void)
 {
-    GPIO_InitTypeDef gpio_init_struct;
-    uint8_t temp[2];
+    GPIO_InitTypeDef gpio_init_struct = {0};
+    uint8_t temp[2] = {0};
 
     FT5206_RST_GPIO_CLK_ENABLE();   /* RST引脚时钟使能 */
     FT5206_INT_GPIO_CLK_ENABLE();   /* INT引脚时钟使能 */
@@ -107,21 +72,24 @@ uint8_t ft5206_init(void)
     gpio_init_struct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;     /* 高速 */
     HAL_GPIO_Init(FT5206_INT_GPIO_PORT, &gpio_init_struct); /* 初始化INT引脚 */
 
-    ct_iic_init();      /* 初始化电容屏的I2C总线 */
+    if (ct_iic_init() != 0U) { return 1U; }
     FT5206_RST(0);      /* 复位 */
     HAL_Delay(20);
     FT5206_RST(1);      /* 释放复位 */
     HAL_Delay(50);
     temp[0] = 0;
-    ft5206_wr_reg(FT5206_DEVIDE_MODE, temp, 1); /* 进入正常操作模式 */
-    ft5206_wr_reg(FT5206_ID_G_MODE, temp, 1);   /* 查询模式 */
+    if (ft5206_wr_reg(FT5206_DEVIDE_MODE, temp, 1) != 0U) { return 1U; }
+    if (ft5206_wr_reg(FT5206_ID_G_MODE, temp, 1) != 0U) { return 1U; }
     temp[0] = 22;                               /* 触摸有效值，22，越小越灵敏 */
-    ft5206_wr_reg(FT5206_ID_G_THGROUP, temp, 1);/* 设置触摸有效值 */
+    if (ft5206_wr_reg(FT5206_ID_G_THGROUP, temp, 1) != 0U) { return 1U; }
     temp[0] = 12;                               /* 激活周期，不能小于12，最大14 */
-    ft5206_wr_reg(FT5206_ID_G_PERIODACTIVE, temp, 1);
+    if (ft5206_wr_reg(FT5206_ID_G_PERIODACTIVE, temp, 1) != 0U) { return 1U; }
     
     /* 读取版本号，参考值：0x3003 */
-    ft5206_rd_reg(FT5206_ID_G_LIB_VERSION, &temp[0], 2);
+    if (ft5206_rd_reg(FT5206_ID_G_LIB_VERSION, &temp[0], 2) != 0U)
+    {
+        return 1U;
+    }
 
     if ((temp[0] == 0X30 && temp[1] == 0X03) || temp[1] == 0X01 || temp[1] == 0X02 || (temp[0] == 0x0 && temp[1] == 0X0))   /* 版本:0X3003/0X0001/0X0002/CST340 */
     {
@@ -144,73 +112,85 @@ const uint16_t FT5206_TPX_TBL[5] = {FT5206_TP1_REG, FT5206_TP2_REG, FT5206_TP3_R
 uint8_t ft5206_scan(uint8_t mode)
 {
     uint8_t sta = 0;
-    uint8_t buf[4];
-    uint8_t i = 0;
-    uint8_t res = 0;
-    uint16_t temp;
+    uint8_t buf[4] = {0};
+    uint8_t count;
+    uint8_t i;
+    uint8_t first_valid = 0xFFU;
+    uint16_t valid_points = 0U;
+    uint16_t x[5] = {0};
+    uint16_t y[5] = {0};
     static uint8_t t = 0;                               /* 控制查询间隔,从而降低CPU占用率 */
-    
+
+    (void)mode;
     t++;
-    
-    if ((t % 10) == 0 || t < 10)                        /* 空闲时,每进入10次CTP_Scan函数才检测1次,从而节省CPU使用率 */
+    if (t > 240U) { t = 10U; }
+    /* A skipped poll is not a release report. */
+    if ((t % 10U != 0U) && (t >= 10U)) { return 0U; }
+
+    if (ft5206_rd_reg(FT5206_REG_NUM_FINGER, &sta, 1U) != 0U)
     {
-        ft5206_rd_reg(FT5206_REG_NUM_FINGER, &sta, 1);  /* 读取触摸点的状态 */
-
-        if ((sta & 0XF) && ((sta & 0XF) < 6))
-        {
-            temp = 0XFFFF << (sta & 0XF);               /* 将点的个数转换为1的位数,匹配tp_dev.sta定义 */
-            tp_dev.sta = (~temp) | TP_PRES_DOWN | TP_CATH_PRES;
-
-            HAL_Delay(4);                                /* 必要的延时，否则老是认为有按键按下 */
-
-            for (i = 0; i < 5; i++)
-            {
-                if (tp_dev.sta & (1 << i))              /* 触摸有效? */
-                {
-                    ft5206_rd_reg(FT5206_TPX_TBL[i], buf, 4);   /* 读取XY坐标值 */
-
-                    if (tp_dev.touchtype & 0X01)        /* 横屏 */
-                    {
-                        tp_dev.y[i] = ((uint16_t)(buf[0] & 0X0F) << 8) + buf[1];
-                        tp_dev.x[i] = ((uint16_t)(buf[2] & 0X0F) << 8) + buf[3];
-                    }
-                    else
-                    {
-                        tp_dev.x[i] = rgblcddev.width - (((uint16_t)(buf[0] & 0X0F) << 8) + buf[1]);
-                        tp_dev.y[i] = ((uint16_t)(buf[2] & 0X0F) << 8) + buf[3];
-                    }
-
-                    if ((buf[0] & 0XF0) != 0X80)tp_dev.x[i] = tp_dev.y[i] = 0; /* 必须是contact事件，才认为有效 */
-
-                    //printf("x[%d]:%d,y[%d]:%d\r\n", i, tp_dev.x[i], i, tp_dev.y[i]);
-                }
-            }
-
-            res = 1;
-
-            if (tp_dev.x[0] == 0 && tp_dev.y[0] == 0)sta = 0;   /* 读到的数据都是0,则忽略此次数据 */
-
-            t = 0;  /* 触发一次,则会最少连续监测10次,从而提高命中率 */
-        }
+        tp_dev.sta = 0U;
+        return 0U;
+    }
+    count = sta & 0x0FU;
+    if ((count == 0U) || (count > 5U))
+    {
+        tp_dev.sta = 0U;
+        return 0U;
     }
 
-    if ((sta & 0X1F) == 0)  /* 无触摸点按下 */
+    HAL_Delay(4);                                /* 保留原有控制器采样延时 */
+    for (i = 0U; i < count; i++)
     {
-        if (tp_dev.sta & TP_PRES_DOWN)      /* 之前是被按下的 */
+        uint16_t raw_x;
+        uint16_t raw_y;
+        uint8_t event;
+        if (ft5206_rd_reg(FT5206_TPX_TBL[i], buf, 4U) != 0U)
         {
-            tp_dev.sta &= ~TP_PRES_DOWN;    /* 标记按键松开 */
+            tp_dev.sta = 0U;
+            return 0U;
         }
-        else    /* 之前就没有被按下 */
+        raw_x = ((uint16_t)(buf[0] & 0x0FU) << 8U) + buf[1];
+        raw_y = ((uint16_t)(buf[2] & 0x0FU) << 8U) + buf[3];
+        event = buf[0] & 0xC0U; /* 00: DOWN, 01: UP, 10: CONTACT, 11: reserved. */
+        if ((event != 0x00U) && (event != 0x80U)) { continue; }
+        if ((tp_dev.touchtype & 0x01U) != 0U)
         {
-            tp_dev.x[0] = 0xffff;
-            tp_dev.y[0] = 0xffff;
-            tp_dev.sta &= 0XE000;           /* 清除点有效标记 */
+            x[i] = raw_y;
+            y[i] = raw_x;
+        }
+        else
+        {
+            if (raw_x >= TOUCH_LCD_WIDTH) { continue; }
+            x[i] = TOUCH_LCD_WIDTH - 1U - raw_x;
+            y[i] = raw_y;
+        }
+        if ((x[i] < TOUCH_LCD_WIDTH) && (y[i] < TOUCH_LCD_HEIGHT))
+        {
+            valid_points |= (uint16_t)(1U << i);
+            if (first_valid == 0xFFU) { first_valid = i; }
         }
     }
-
-    if (t > 240)t = 10; /* 重新从10开始计数 */
-
-    return res;
+    if (first_valid == 0xFFU)
+    {
+        tp_dev.sta = 0U;
+        return 0U;
+    }
+    /* Publish only after the whole report has been read. (0,0) is a valid
+     * screen coordinate; validity comes from event/count/bounds, not zeros. */
+    for (i = 0U; i < count; i++)
+    {
+        tp_dev.x[i] = x[i];
+        tp_dev.y[i] = y[i];
+    }
+    if (first_valid != 0U)
+    {
+        tp_dev.x[0] = x[first_valid];
+        tp_dev.y[0] = y[first_valid];
+    }
+    tp_dev.sta = valid_points | TP_PRES_DOWN | TP_CATH_PRES;
+    t = 0U;
+    return 1U;
 }
 
 

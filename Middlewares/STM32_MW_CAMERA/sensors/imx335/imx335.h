@@ -61,10 +61,30 @@ typedef struct
   IMX335_GetTick_Func       GetTick;
 } IMX335_IO_t;
 
+typedef enum
+{
+  IMX335_EXPOSURE_STAGE_NONE = 0,
+  IMX335_EXPOSURE_STAGE_READ_VMAX,
+  IMX335_EXPOSURE_STAGE_CALCULATE_SHUTTER,
+  IMX335_EXPOSURE_STAGE_ASSERT_HOLD,
+  IMX335_EXPOSURE_STAGE_WRITE_SHUTTER,
+  IMX335_EXPOSURE_STAGE_RELEASE_HOLD
+} IMX335_ExposureStage_t;
+
+typedef struct
+{
+  int32_t requested_exposure_us;
+  uint32_t vmax_lines;
+  uint32_t shutter_lines;
+  int32_t failure_stage;
+  int32_t driver_status;
+} IMX335_ExposureDiagnostics_t;
+
 typedef struct
 {
   IMX335_IO_t         IO;
   imx335_ctx_t        Ctx;
+  IMX335_ExposureDiagnostics_t exposure_diagnostics;
   uint8_t             IsInitialized;
 } IMX335_Object_t;
 
@@ -134,6 +154,9 @@ int32_t IMX335_ReadID(IMX335_Object_t *pObj, uint32_t *Id);
 int32_t IMX335_GetCapabilities(IMX335_Object_t *pObj, IMX335_Capabilities_t *Capabilities);
 int32_t IMX335_SetGain(IMX335_Object_t *pObj, int32_t gain);
 int32_t IMX335_SetExposure(IMX335_Object_t *pObj, int32_t exposure);
+int32_t IMX335_GetExposureDiagnostics(
+    const IMX335_Object_t *pObj,
+    IMX335_ExposureDiagnostics_t *diagnostics);
 int32_t IMX335_SetFrequency(IMX335_Object_t *pObj, int32_t frequency);
 int32_t IMX335_SetFramerate(IMX335_Object_t *pObj, int32_t framerate);
 int32_t IMX335_MirrorFlipConfig(IMX335_Object_t *pObj, uint32_t Config);

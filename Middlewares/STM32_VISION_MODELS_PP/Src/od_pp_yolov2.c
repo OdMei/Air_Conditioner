@@ -49,26 +49,27 @@ int32_t yolov2_pp_nmsFiltering_centroid(yolov2_pp_in_t  *pInput,
         for (i = 0; i < (pInput_static_param->nb_detect * anch_stride) ; i += anch_stride)
         {
             if (pInbuff[i + AI_YOLOV2_PP_CLASSPROB + k] == 0) continue;
+            /* Sorted greedy NMS cannot change an already selected box.  Once
+             * the public result limit is reached, lower-ranked boxes will be
+             * discarded regardless of their mutual overlap. */
+            if (limit_counter >= pInput_static_param->max_boxes_limit)
+            {
+                for (j = i; j < (pInput_static_param->nb_detect * anch_stride); j += anch_stride)
+                {
+                    pInbuff[j + AI_YOLOV2_PP_CLASSPROB + k] = 0;
+                }
+                break;
+            }
+            limit_counter++;
             float32_t *a = &(pInbuff[i + AI_YOLOV2_PP_XCENTER]);
             for (j = i + anch_stride; j < (pInput_static_param->nb_detect * anch_stride); j += anch_stride)
             {
+                if (pInbuff[j + AI_YOLOV2_PP_CLASSPROB + k] == 0) continue;
                 float32_t *b = &(pInbuff[j + AI_YOLOV2_PP_XCENTER]);
                 if (vision_models_box_iou(a, b) > pInput_static_param->iou_threshold)
                 {
                     pInbuff[j + AI_YOLOV2_PP_CLASSPROB + k] = 0;
                 }
-            }
-        }
-        for (int32_t y = 0; y <= (pInput_static_param->nb_detect * anch_stride); y += anch_stride)
-        {
-            if ((limit_counter < pInput_static_param->max_boxes_limit) &&
-                (pInbuff[y + AI_YOLOV2_PP_CLASSPROB + k] != 0))
-            {
-                limit_counter++;
-            }
-            else
-            {
-                pInbuff[y + AI_YOLOV2_PP_CLASSPROB + k] = 0;
             }
         }
     }
@@ -142,15 +143,25 @@ int32_t yolov2_pp_getNNBoxes_centroid(yolov2_pp_in_t *pInput,
                 /* read and activate objectness */
                 pOutbuff[el_offset + AI_YOLOV2_PP_OBJECTNESS] = vision_models_sigmoid_f(pInbuff[el_offset + AI_YOLOV2_PP_OBJECTNESS]);
 
-                /* activate array of classes pred */
-                vision_models_softmax_f(&pInbuff[el_offset + AI_YOLOV2_PP_CLASSPROB],
-                        &pOutbuff[el_offset + AI_YOLOV2_PP_CLASSPROB],
-                        pInput_static_param->nb_classes,
-                        tmp_a);
-                for (int32_t k = 0; k < pInput_static_param->nb_classes; k++)
+                /* A one-class softmax is exactly one.  Do not spend an
+                 * exponential, reciprocal and copy on every person-only
+                 * candidate, or allow class-logit overflow to produce NaN. */
+                if (pInput_static_param->nb_classes == 1)
                 {
-                    pOutbuff[el_offset + AI_YOLOV2_PP_CLASSPROB + k] = pOutbuff[el_offset + AI_YOLOV2_PP_OBJECTNESS] *
-                                                                       pOutbuff[el_offset + AI_YOLOV2_PP_CLASSPROB + k];
+                    pOutbuff[el_offset + AI_YOLOV2_PP_CLASSPROB] = pOutbuff[el_offset + AI_YOLOV2_PP_OBJECTNESS];
+                }
+                else
+                {
+                    /* Multi-class activation retains the vendor behavior. */
+                    vision_models_softmax_f(&pInbuff[el_offset + AI_YOLOV2_PP_CLASSPROB],
+                            &pOutbuff[el_offset + AI_YOLOV2_PP_CLASSPROB],
+                            pInput_static_param->nb_classes,
+                            tmp_a);
+                    for (int32_t k = 0; k < pInput_static_param->nb_classes; k++)
+                    {
+                        pOutbuff[el_offset + AI_YOLOV2_PP_CLASSPROB + k] = pOutbuff[el_offset + AI_YOLOV2_PP_OBJECTNESS] *
+                                                                           pOutbuff[el_offset + AI_YOLOV2_PP_CLASSPROB + k];
+                    }
                 }
 
                 vision_models_maxi_if32ou32(&pOutbuff[el_offset + AI_YOLOV2_PP_CLASSPROB],

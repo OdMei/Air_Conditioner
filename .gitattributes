@@ -1,0 +1,14 @@
+# Preserve byte-verified model and firmware artifacts on every platform.
+*.hex -text
+*.bin binary
+*.tflite binary
+*.a binary
+Project/Project/Air_Conditioner/Model/network*.[ch] -text
+Project/Project/Air_Conditioner/Model/model-bundle.json -text
+
+# Retain the validated SDK snapshot and the text-only ARM build recipes.
+Middlewares/AI/** -text
+Project/Project/Air_Conditioner/STM32CubeIDE/Appli/Release/** -text
+
+# Shell scripts need LF even on a Windows checkout.
+*.sh text eol=lf

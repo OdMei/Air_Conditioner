@@ -2,7 +2,7 @@
  ******************************************************************************
  * @file    ll_aton_version.h
  * @author  SRA Artificial Intelligence & Embedded Architectures
- * @brief   Header file of ATON Verion information
+ * @brief   Header file of ATON Version information
  ******************************************************************************
  * @attention
  *
@@ -19,10 +19,10 @@
 #ifndef __LL_ATON_VERSION_H
 #define __LL_ATON_VERSION_H
 
-#define LL_ATON_VERSION_NAME  "atonn-v1.0.0-rc0-16-g0307e413"
+#define LL_ATON_VERSION_NAME  "atonn-v1.1.3-275-g6770925d"
 #define LL_ATON_VERSION_MAJOR (1)
-#define LL_ATON_VERSION_MINOR (0)
-#define LL_ATON_VERSION_MICRO (0)
-#define LL_ATON_VERSION_DEV   (16)
+#define LL_ATON_VERSION_MINOR (1)
+#define LL_ATON_VERSION_MICRO (3)
+#define LL_ATON_VERSION_DEV   (275)
 
 #endif

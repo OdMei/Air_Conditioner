@@ -1,0 +1,89 @@
+{
+  "folders": [
+    {
+      "name": "Air_Conditioner",
+      "path": ".."
+    }
+  ],
+  "settings": {
+    "cmake.sourceDirectory": "${workspaceFolder}/simulator",
+    "cmake.cmakePath": "D:/Visual Studio/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin/cmake.exe",
+    "cmake.useCMakePresets": "always",
+    "cmake.configureOnOpen": false
+  },
+  "tasks": {
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "预览：配置",
+        "type": "process",
+        "command": "D:/Visual Studio/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin/cmake.exe",
+        "args": ["--preset", "lvgl-preview"],
+        "options": {
+          "cwd": "${workspaceFolder}/simulator",
+          "env": {
+            "PATH": "C:/msys64/mingw64/bin;${env:PATH}"
+          }
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "预览：构建",
+        "type": "process",
+        "command": "D:/Visual Studio/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin/cmake.exe",
+        "args": ["--build", "--preset", "lvgl-preview"],
+        "dependsOn": "预览：配置",
+        "options": {
+          "cwd": "${workspaceFolder}/simulator",
+          "env": {
+            "PATH": "C:/msys64/mingw64/bin;${env:PATH}"
+          }
+        },
+        "group": {
+          "kind": "build",
+          "isDefault": true
+        },
+        "problemMatcher": ["$gcc"]
+      },
+      {
+        "label": "预览：运行",
+        "type": "process",
+        "command": "powershell.exe",
+        "args": [
+          "-NoProfile",
+          "-ExecutionPolicy",
+          "Bypass",
+          "-File",
+          "${workspaceFolder}/simulator/run_preview.ps1"
+        ],
+        "dependsOn": "预览：构建",
+        "options": {
+          "cwd": "${workspaceFolder}/simulator"
+        },
+        "problemMatcher": []
+      }
+    ]
+  },
+  "launch": {
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "PC 界面预览",
+        "type": "cppvsdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/simulator/build/lvgl_preview.exe",
+        "args": [],
+        "cwd": "${workspaceFolder}/simulator/build",
+        "stopAtEntry": false,
+        "externalConsole": false,
+        "environment": [
+          {
+            "name": "PATH",
+            "value": "C:/msys64/mingw64/bin;${env:PATH}"
+          }
+        ],
+        "preLaunchTask": "预览：构建"
+      }
+    ]
+  }
+}

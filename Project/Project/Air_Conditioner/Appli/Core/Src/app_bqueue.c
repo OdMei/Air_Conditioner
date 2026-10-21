@@ -40,7 +40,7 @@ uint8_t *app_bqueue_get_free(app_bqueue_t *bqueue, uint8_t is_blocking)
 {
     uint8_t *free;
 
-    if (tx_semaphore_get(&bqueue->free, is_blocking ? TX_WAIT_FOREVER : TX_NO_WAIT) == TX_NO_INSTANCE)
+    if (tx_semaphore_get(&bqueue->free, is_blocking ? TX_WAIT_FOREVER : TX_NO_WAIT) != TX_SUCCESS)
     {
         return NULL;
     }
@@ -71,4 +71,35 @@ uint8_t *app_bqueue_get_ready(app_bqueue_t *bqueue)
 void app_bqueue_put_ready(app_bqueue_t *bqueue)
 {
     tx_semaphore_put(&bqueue->ready);
+}
+
+uint8_t *app_bqueue_get_ready_timeout(app_bqueue_t *bqueue, ULONG wait_ticks)
+{
+    uint8_t *buffer;
+    if (tx_semaphore_get(&bqueue->ready, wait_ticks) != TX_SUCCESS) { return NULL; }
+    buffer = bqueue->buffers[bqueue->ready_idx];
+    bqueue->ready_idx = (bqueue->ready_idx + 1U) % bqueue->buffer_nb;
+    return buffer;
+}
+
+uint8_t *app_bqueue_get_free_timeout(app_bqueue_t *bqueue, ULONG wait_ticks)
+{
+    uint8_t *buffer;
+    if (tx_semaphore_get(&bqueue->free, wait_ticks) != TX_SUCCESS) { return NULL; }
+    buffer = bqueue->buffers[bqueue->free_idx];
+    bqueue->free_idx = (bqueue->free_idx + 1U) % bqueue->buffer_nb;
+    return buffer;
+}
+
+void app_bqueue_reset(app_bqueue_t *bqueue)
+{
+    /* Called by the stopped pipeline supervisor, never against live waiters. */
+    while (tx_semaphore_get(&bqueue->free, TX_NO_WAIT) == TX_SUCCESS) {}
+    while (tx_semaphore_get(&bqueue->ready, TX_NO_WAIT) == TX_SUCCESS) {}
+    bqueue->free_idx = 0U;
+    bqueue->ready_idx = 0U;
+    for (uint8_t index = 0U; index < bqueue->buffer_nb; index++)
+    {
+        tx_semaphore_put(&bqueue->free);
+    }
 }

@@ -83,9 +83,23 @@ int32_t yolov8_pp_nmsFiltering_centroid(od_pp_out_t *pOutput,
             for (int32_t i = 0; i < detections_per_class ; i ++)
             {
                 if (pOutput->pOutBuff[i].conf == 0) continue;
+                /* Greedy NMS selects boxes in the same sorted order as the
+                 * original pass. Once this class has enough selected boxes,
+                 * every remaining candidate would be removed by the result
+                 * limit, so avoid their otherwise quadratic IoU work. */
+                if (limit_counter >= pInput_static_param->max_boxes_limit)
+                {
+                    for (j = i; j < detections_per_class; ++j)
+                    {
+                        pOutput->pOutBuff[j].conf = 0;
+                    }
+                    break;
+                }
+                limit_counter++;
                 float32_t *a = &(pOutput->pOutBuff[i].x_center);
                 for (j = i + 1; j < detections_per_class; j ++)
                 {
+                    if (pOutput->pOutBuff[j].conf == 0) continue;
                     float32_t *b = &(pOutput->pOutBuff[j].x_center);
                     if (vision_models_box_iou(a, b) > pInput_static_param->iou_threshold)
                     {
@@ -94,19 +108,6 @@ int32_t yolov8_pp_nmsFiltering_centroid(od_pp_out_t *pOutput,
                 }
             }
 
-            /* Limits detections count */
-            for (int32_t i = 0; i < detections_per_class; i++)
-            {
-                if ((limit_counter < pInput_static_param->max_boxes_limit) &&
-                    (pOutput->pOutBuff[i].conf != 0))
-                {
-                    limit_counter++;
-                }
-                else
-                {
-                    pOutput->pOutBuff[i].conf = 0;
-                }
-            }
         }
     }
     return (AI_OD_POSTPROCESS_ERROR_NO);

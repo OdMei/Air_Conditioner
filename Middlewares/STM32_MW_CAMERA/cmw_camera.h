@@ -84,6 +84,15 @@ typedef struct {
   CMW_Manual_roi_area_t manual_conf;
 } CMW_DCMIPP_Conf_t;
 
+typedef struct
+{
+  int32_t requested_exposure_us;
+  uint32_t vmax_lines;
+  uint32_t shutter_lines;
+  int32_t failure_stage;
+  int32_t driver_status;
+} CMW_CAMERA_ExposureDiagnostics_t;
+
 
 /* Camera exposure mode
  * Some cameras embed their own Auto Exposure algorithm.
@@ -97,8 +106,23 @@ typedef struct {
 DCMIPP_HandleTypeDef* CMW_CAMERA_GetDCMIPPHandle();
 
 int32_t CMW_CAMERA_Init( CMW_CameraInit_t *init_conf );
-int32_t CMW_CAMERA_DeInit();
+/* Whole-camera reset. Call only after capture/NN/ISP users are quiesced.
+   Safe after failed partial initialization; does not detach shared I2C. */
+int32_t CMW_CAMERA_DeInit(void);
 int32_t CMW_CAMERA_Run();
+/**
+ * @brief Read the latest unmodified ISP_BackgroundProcess status.
+ * @param status Output pointer; must not be NULL.
+ * @return CMW status code.
+ */
+int32_t CMW_CAMERA_GetLastISPBackgroundStatus(int32_t *status);
+/**
+ * @brief Read the latest IMX335 exposure programming diagnostics.
+ * @param diagnostics Output structure; must not be NULL.
+ * @return CMW status code.
+ */
+int32_t CMW_CAMERA_GetExposureDiagnostics(
+    CMW_CAMERA_ExposureDiagnostics_t *diagnostics);
 int32_t CMW_CAMERA_SetPipeConfig(uint32_t pipe, CMW_DCMIPP_Conf_t *p_conf, uint32_t *pitch);
 int32_t CMW_CAMERA_GetSensorName(CMW_Sensor_Name_t *sensorName);
 
