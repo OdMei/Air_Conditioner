@@ -23,6 +23,7 @@ CORE = ROOT / "Project/Project/Air_Conditioner/Appli/Core/Src"
 OUTPUT = ROOT / "build/firmware"
 LVGL = ROOT / "Middlewares/LVGL"
 GCC = None
+EXTRA_DEFINES = []
 OLD_ROOT = "E:/Automation/STM32project/STM32N6/Air_Conditioner"
 HISTORIC_ROOT = "D:/Learning/AC-N647/Air_Conditioner/Air_Conditioner"
 VECTOR_ADDRESS = 0x70100400
@@ -56,6 +57,14 @@ def relocate(value: str) -> str:
 def absolute_input(value: str) -> Path:
     path = Path(relocate(value))
     return (path if path.is_absolute() else RELEASE / path).resolve()
+
+
+def has_unexpanded_historical_path(value: str) -> bool:
+    normalized = value.replace("\\", "/")
+    current_root = ROOT.as_posix().rstrip("/")
+    historical_roots = (OLD_ROOT, HISTORIC_ROOT)
+    return any(root.rstrip("/") != current_root and
+               root.rstrip("/") in normalized for root in historical_roots)
 
 
 def find_compiler(explicit: str | None = None) -> Path:
@@ -327,9 +336,12 @@ def compile_command(row, target: Path):
             include = "-I" + (ROOT / directory).resolve().as_posix()
             if include not in command:
                 command.append(include)
+    for definition in EXTRA_DEFINES:
+        command.append("-D" + definition)
     command += [row["source"].as_posix(), "-o", target.as_posix(),
                 "-MMD", "-MF", target.with_suffix(".d").as_posix()]
-    if any("$(" in argument or "E:/Automation/" in argument for argument in command):
+    if any("$(" in argument or has_unexpanded_historical_path(argument)
+           for argument in command):
         raise RuntimeError(f"Unexpanded historical argument: {row['object']}")
     return command
 
@@ -393,7 +405,8 @@ def link_command(output: Path, objects):
         else:
             result.append(token)
     result += ["-o", (output / "appli.elf").as_posix()]
-    if any("$(" in argument or "E:/Automation/" in argument for argument in result):
+    if any("$(" in argument or has_unexpanded_historical_path(argument)
+           for argument in result):
         raise RuntimeError("Unexpanded link argument")
     return result
 
@@ -403,11 +416,17 @@ def main():
     parser.add_argument("--phase", choices=("plan", "prepare", "final"), default="plan")
     parser.add_argument("--label", help="Optional new output directory name; it must not already contain files")
     parser.add_argument("--gcc", help="ARM GCC executable or toolchain directory (or set ARM_GCC)")
+    parser.add_argument("--define", action="append", default=[],
+                        help="Additional compiler definition, repeatable (KEY or KEY=VALUE)")
     parser.add_argument("--jobs", type=int, default=min(6, os.cpu_count() or 1))
     args = parser.parse_args()
     if args.jobs < 1:
         parser.error("--jobs must be positive")
-    global GCC
+    global GCC, EXTRA_DEFINES
+    for definition in args.define:
+        if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*(=.*)?", definition):
+            parser.error(f"--define must be KEY or KEY=VALUE: {definition}")
+    EXTRA_DEFINES = list(args.define)
     GCC = find_compiler(args.gcc)
     if not GCC.is_file() or GCC.stat().st_size == 0:
         raise RuntimeError(f"Compiler missing/empty: {GCC}")
@@ -429,6 +448,7 @@ def main():
     manifest = {"phase": args.phase, "label": label, "status": "planned", "compiler": str(GCC),
                 "programming": "not_performed",
                 "compiler_version": version.splitlines()[0], "jobs": args.jobs,
+                "extra_defines": EXTRA_DEFINES,
                 "full_plan_count": total_plan_count, "compile_count": len(plan),
                 "reused_objects": [], "excluded_platform_sources": [str(path) for path in excluded],
                 "note": "Every object is compiled from the live source; Release is only read for recipes.",

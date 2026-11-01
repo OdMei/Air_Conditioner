@@ -42,6 +42,8 @@
 #include "bsp_bus.h"
 #include "uart.h"
 #include "app_frame_rate.h"
+#include "app_audio_es8388_service.h"
+#include "app_voice_model.h"
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
@@ -62,6 +64,10 @@ static TX_MUTEX s_perf_lock;
 static app_perf_window_t s_perf_windows[APP_PERF_COUNT];
 static uint32_t s_perf_cycles_per_us;
 static uint8_t s_perf_cycle_clock_valid;
+#if APP_AUDIO_ES8388_SERVICE_ENABLE
+static app_audio_es8388_service_t s_audio_service;
+static app_voice_kws_t s_voice_kws;
+#endif
 
 typedef struct { uint32_t tick_ms; uint32_t cycles; } app_perf_stamp_t;
 
@@ -253,6 +259,10 @@ static uint8_t app_vision_wait_paused(void);
 void app_run(void)
 {
     app_climate_init(&display.info.climate, APP_DEFAULT_TARGET_TEMP_C);
+#if APP_AUDIO_ES8388_SERVICE_ENABLE
+    app_voice_kws_init(&s_voice_kws, &display.info.climate,
+                       app_voice_model_infer);
+#endif
     display.info.sensor_valid = 0U;
     display.info.humidity_valid = 0U;
     display.info.temperature_source = APP_TEMPERATURE_DHT11;
@@ -298,6 +308,13 @@ void app_run(void)
 
     key_init();
     uart_tx_start();
+#if APP_AUDIO_ES8388_SERVICE_ENABLE
+    if (app_audio_es8388_service_init(&s_audio_service, &s_voice_kws) ==
+        APP_AUDIO_ES8388_OK)
+    {
+        (void)app_audio_es8388_service_start(&s_audio_service);
+    }
+#endif
     if (tx_thread_create(&sensor_thread, "Sensor Thread", sensor_thread_entry,
                          0, sensor_thread_stack, sizeof(sensor_thread_stack),
                          15U, 15U, 10U, TX_AUTO_START) != TX_SUCCESS) { Error_Handler(); }
@@ -458,6 +475,9 @@ static VOID input_thread_entry(ULONG id)
         { app_input_apply_action(app_climate_remote_action(remote_key)); }
         app_touch_poll();
         app_input_update_touch();
+#if APP_AUDIO_ES8388_SERVICE_ENABLE
+        app_audio_es8388_service_poll(&s_audio_service);
+#endif
         now = HAL_GetTick();
         if ((uint32_t)(now - last_climate_tick) >= APP_INPUT_CLIMATE_PERIOD_MS)
         {

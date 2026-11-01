@@ -55,6 +55,8 @@ void SecureFault_Handler(void);
 void SVC_Handler(void);
 void DebugMon_Handler(void);
 void DCMIPP_IRQHandler(void);
+void GPDMA1_Channel1_IRQHandler(void);
+void GPDMA1_Channel2_IRQHandler(void);
 /* USER CODE BEGIN EFP */
 
 /* USER CODE END EFP */

@@ -76,7 +76,9 @@ class FirmwarePackagingTests(unittest.TestCase):
             self.assertLess(command.index("assembler-with-cpp"), command.index(source.as_posix()))
             self.assertIn("-I" + (builder.ROOT / "Drivers").as_posix(), command)
             self.assertNotIn("old.o", command)
-            self.assertFalse(any("$(" in value or "E:/Automation/" in value for value in command))
+            self.assertFalse(any("$(" in value or
+                                 builder.has_unexpanded_historical_path(value)
+                                 for value in command))
         finally:
             builder.GCC = previous
 

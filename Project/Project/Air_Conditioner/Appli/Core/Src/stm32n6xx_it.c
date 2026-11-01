@@ -203,6 +203,19 @@ void DCMIPP_IRQHandler(void)
   /* USER CODE END DCMIPP_IRQn 1 */
 }
 
+extern DMA_HandleTypeDef handle_GPDMA1_Channel1;
+extern DMA_HandleTypeDef handle_GPDMA1_Channel2;
+
+void GPDMA1_Channel1_IRQHandler(void)
+{
+  HAL_DMA_IRQHandler(&handle_GPDMA1_Channel1);
+}
+
+void GPDMA1_Channel2_IRQHandler(void)
+{
+  HAL_DMA_IRQHandler(&handle_GPDMA1_Channel2);
+}
+
 /* USER CODE BEGIN 1 */
 void CSI_IRQHandler(void)
 {

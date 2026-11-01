@@ -55,6 +55,16 @@ add_executable(lvgl_preview
     "${APP_CORE}/Src/app_perf_window.c"
     "${APP_CORE}/Src/app_font_ui_16.c"
     "${APP_CORE}/Src/app_climate_logic.c"
+    "${APP_CORE}/Src/audio_frame.c"
+    "${APP_CORE}/Src/audio_frontend.c"
+    "${APP_CORE}/Src/deepseek_api.c"
+    "${APP_CORE}/Src/audio_uac_output.c"
+    "${APP_CORE}/Src/app_audio_pipeline.c"
+    "${APP_CORE}/Src/app_audio_es8388_service.c"
+    "${APP_CORE}/Src/app_voice_control.c"
+    "${APP_CORE}/Src/app_voice_kws.c"
+    "${APP_CORE}/Src/app_voice_ei_adapter.c"
+    "${APP_CORE}/Src/app_voice_audio_es8388.c"
     "${APP_CORE}/Src/app_input_logic.c")
 target_compile_definitions(lvgl_preview PRIVATE APP_SIMULATOR=1 SDL_MAIN_HANDLED)
 target_include_directories(lvgl_preview PRIVATE

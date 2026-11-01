@@ -30,6 +30,7 @@
 #include "uart.h"
 #include "npu_cache.h"
 #include "app.h"
+#include "es8388_sai.h"
 
 /* USER CODE END Includes */
 
@@ -51,6 +52,10 @@
 /* Private variables ---------------------------------------------------------*/
 
 DMA2D_HandleTypeDef hdma2d;
+SAI_HandleTypeDef hsai_BlockA1;
+SAI_HandleTypeDef hsai_BlockB1;
+DMA_HandleTypeDef handle_GPDMA1_Channel1;
+DMA_HandleTypeDef handle_GPDMA1_Channel2;
 
 I2C_HandleTypeDef hi2c2;
 I2C_HandleTypeDef hi2c4;
@@ -77,6 +82,7 @@ static UCHAR main_thread_stack[4096];
 
 /* Private function prototypes -----------------------------------------------*/
 static void MX_GPIO_Init(void);
+static void MX_GPDMA1_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_RAMCFG_Init(void);
 static void SystemIsolation_Config(void);
@@ -768,6 +774,31 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+static void MX_GPDMA1_Init(void)
+{
+  __HAL_RCC_GPDMA1_CLK_ENABLE();
+  HAL_NVIC_SetPriority(GPDMA1_Channel1_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(GPDMA1_Channel1_IRQn);
+  HAL_NVIC_SetPriority(GPDMA1_Channel2_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(GPDMA1_Channel2_IRQn);
+}
+
+void HAL_SAI_TxCpltCallback(SAI_HandleTypeDef *hsai)
+{
+  if (hsai != NULL && hsai->Instance == SAI1_Block_A)
+  {
+    es8388_sai_tx_dma_cplt_handler();
+  }
+}
+
+void HAL_SAI_RxCpltCallback(SAI_HandleTypeDef *hsai)
+{
+  if (hsai != NULL && hsai->Instance == SAI1_Block_B)
+  {
+    es8388_sai_rx_dma_cplt_handler();
+  }
+}
+
 VOID tx_application_define(VOID *first_unused_memory)
 {
   if (tx_thread_create(&main_thread, "Main Thread", main_thread_entry, 0, main_thread_stack, sizeof(main_thread_stack), TX_MAX_PRIORITIES - 1, TX_MAX_PRIORITIES - 1, 10, TX_AUTO_START) != TX_SUCCESS)
@@ -789,6 +820,7 @@ static VOID main_thread_entry(ULONG id)
   SystemCoreClockUpdate();
 
   MX_GPIO_Init();
+  MX_GPDMA1_Init();
 #ifdef DEBUG
   MX_XSPI1_Init();
   MX_XSPI2_Init();

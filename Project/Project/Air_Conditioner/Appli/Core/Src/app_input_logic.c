@@ -16,3 +16,9 @@ app_climate_action_t app_input_key_to_action(uint8_t key_code)
             return APP_ACTION_NONE;
     }
 }
+
+app_voice_status_t app_input_voice_to_action(const app_voice_result_t *result,
+                                             app_climate_action_t *action)
+{
+    return app_voice_to_action(result, action);
+}
